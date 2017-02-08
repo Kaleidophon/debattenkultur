@@ -18,7 +18,6 @@ respective versions of the project.
 
 * Init project structure
 * Add appropriate models
-* Add schemata corresponding to these models
 
 ### v0.2
 
