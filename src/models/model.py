@@ -12,6 +12,9 @@ from misc.helpers import NotWritableException, NotReadableException
 
 
 class Model(object):
+    """
+    Model superclass.
+    """
     __metaclass__ = ABCMeta
     formatting_functions = {}
     internals = {
@@ -30,6 +33,15 @@ class Model(object):
 
         self.not_writable = self.not_writable.union(not_writable)
         self.not_readable = self.not_readable.union(not_readable)
+
+    @property
+    def attributes(self):
+        return {
+            key: value for key, value in self.__dict__.iteritems()
+            if key not in self.internals
+            and key not in self.readables
+            and not key.startswith("_")
+        }
 
     def __setattr__(self, key, value):
         if key in self.not_writable:
