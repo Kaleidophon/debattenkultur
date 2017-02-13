@@ -50,8 +50,8 @@ class BundesParser(Parser):
         )
 
         # Parse sections
-        #reports = [parser.process() for parser in parsers]
-        #return reports
+        results = [parser.process() for parser in parsers]
+        return results
 
     def _blockify(self, lines):
         """
@@ -87,9 +87,7 @@ class BundesParser(Parser):
         protocol_sections = self.config["PROTOCOL_SECTIONS"]
 
         for section, position in protocol_sections.iteritems():
-            block_parsers[position] = SECTIONS_TO_PARSERS[section](
-                self.rules, self.config, self.parser_input
-            )
+            block_parsers[position] = SECTIONS_TO_PARSERS[section]
 
         self._check_positions(protocol_sections, len(blocks))
 
@@ -102,6 +100,11 @@ class BundesParser(Parser):
             else:
                 _block_parsers.append(block_parser)
                 _blocks.append(blocks[index])
+
+        for index, block_parser in enumerate(_block_parsers):
+            _block_parsers[index] = _block_parsers[index](
+                self.rules, self.config, _blocks[index]
+            )
 
         return _block_parsers, _blocks
 
