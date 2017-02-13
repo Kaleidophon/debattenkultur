@@ -13,8 +13,6 @@ from misc.helpers import get_config_from_py_file, ProtocolParsingException
 
 
 class Parser(object):
-    position = None
-
     def __init__(self, rules, parser_config, parser_input):
         self.rules = rules
         self.config = parser_config
@@ -43,13 +41,13 @@ class BundesParser(Parser):
         input_path = self.parser_input
         print u"Loading file from {}...".format(input_path)
         lines = [line for line in codecs.open(input_path, "r", "utf-8")]
-        print len(lines)
+
+        print u"Partitioning protocol into blocks, assigning parsers..."
         blocks = self._blockify(lines)
         parsers, blocks = self._assign_parsers(blocks)
-
-        print len(blocks)
-        print len(parsers)
-        print parsers
+        print u"Created {} blocks: {}.".format(
+            len(blocks), ", ".join(self.config["PROTOCOL_SECTIONS"].keys())
+        )
 
         # Parse sections
         #reports = [parser.process() for parser in parsers]
@@ -85,24 +83,15 @@ class BundesParser(Parser):
 
     def _assign_parsers(self, blocks):
         from constants import SECTIONS_TO_PARSERS  # Avoid circular imports
-        parsers = [
-            SECTIONS_TO_PARSERS[section](
+        block_parsers = [None] * len(blocks)
+        protocol_sections = self.config["PROTOCOL_SECTIONS"]
+
+        for section, position in protocol_sections.iteritems():
+            block_parsers[position] = SECTIONS_TO_PARSERS[section](
                 self.rules, self.config, self.parser_input
             )
-            for section in self.config["PROTOCOL_SECTIONS"]
-        ]
 
-        # Perform some consistency checks
-        if len(parsers) > len(blocks):
-            raise ProtocolParsingException(
-                u"There are more parsers {} than blocks {} found within the "
-                u"document.".format(len(parsers), len(blocks))
-            )
-        self._check_parser_positions(parsers, len(blocks))
-
-        block_parsers = [None] * len(blocks)
-        for parser in parsers:
-            block_parsers[parser.position] = parser
+        self._check_positions(protocol_sections, len(blocks))
 
         # Merge remaining blocks
         _block_parsers = []
@@ -117,49 +106,48 @@ class BundesParser(Parser):
         return _block_parsers, _blocks
 
     @staticmethod
-    def _check_parser_positions(parsers, number_of_blocks):
-        parser_positions = [parser.position for parser in parsers]
+    def _check_positions(protocol_sections, number_of_blocks):
+        positions = protocol_sections.values()
 
-        for position in parser_positions:
-            if parser_positions.count(position) > 1:
+        for position in positions:
+            if positions.count(position) > 1:
                 raise ProtocolParsingException(
-                    u"At least two parsers are occupying position {}".format(
+                    u"At least two sections are occupying position {}".format(
                         position
                     )
                 )
 
             # Check if negative positions are already being occupied
             if position < 0:
-                if (number_of_blocks + position) in parser_positions:
+                if (number_of_blocks + position) in positions:
                     raise ProtocolParsingException(
-                        u"At least two parsers are occupying position {}".format(
+                        u"At least two sections are occupying position {}".format(
                             position
                         )
                     )
 
 
 class HeaderParser(Parser):
-    position = 0
+    pass
 
 
 class AgendaItemsParser(Parser):
-    position = 1
+    pass
 
 
 class SessionHeaderParser(Parser):
-    position = 2
+    pass
 
 
 class DiscussionsParser(Parser):
-    position = 3
+    pass
 
 
 class AttachmentsParser(Parser):
-    position = -1
+    pass
 
 
 if __name__ == "__main__":
     config = get_config_from_py_file("../../config.py")
-    print config
     bp = BundesParser([], config, "../../data/samples/sample.txt")
     bp.process()
