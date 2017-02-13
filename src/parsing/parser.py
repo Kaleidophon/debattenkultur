@@ -10,6 +10,7 @@ import codecs
 
 # PROJECT
 from misc.helpers import get_config_from_py_file, ProtocolParsingException
+from models.header import Header
 
 
 class Parser(object):
@@ -51,6 +52,9 @@ class BundesParser(Parser):
 
         # Parse sections
         results = [parser.process() for parser in parsers]
+        print results
+        for result in results:
+            print result.attributes
         return results
 
     def _blockify(self, lines):
@@ -131,7 +135,9 @@ class BundesParser(Parser):
 
 
 class HeaderParser(Parser):
-    pass
+
+    def process(self):
+        return Header(self.parser_input)
 
 
 class AgendaItemsParser(Parser):

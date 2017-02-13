@@ -39,7 +39,7 @@ class Model(object):
         return {
             key: value for key, value in self.__dict__.iteritems()
             if key not in self.internals
-            and key not in self.readables
+            and key not in self.not_readable
             and not key.startswith("_")
         }
 

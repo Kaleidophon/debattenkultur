@@ -8,3 +8,4 @@ PROTOCOL_SECTIONS = {
 	"DISCUSSIONS": 3,
 	"ATTACHMENTS": -1  # Everything before belongs to DISCUSSIONS
 }
+PROTOCOL_DATE_FORMAT = '%A, den %d. %B %Y'
