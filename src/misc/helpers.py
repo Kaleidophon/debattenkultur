@@ -40,3 +40,9 @@ def get_config_from_py_file(config_path):
     return {
         key: getattr(config, key) for key in dir(config) if key.isupper()
     }
+
+
+class ProtocolParsingException(Exception):
+
+    def __init__(self, message):
+        super(ProtocolParsingException, self).__init__(message)

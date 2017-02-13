@@ -10,8 +10,7 @@ from parsing.parser import (
     AgendaItemsParser,
     SessionHeaderParser,
     DiscussionsParser,
-    AttachmentsParser,
-    FooterParser
+    AttachmentsParser
 )
 
 # Defining the map from section to their corresponding parsers
@@ -20,6 +19,5 @@ SECTIONS_TO_PARSERS = {
     "AGENDA_ITEMS": AgendaItemsParser,
     "SESSION_HEADER": SessionHeaderParser,
     "DISCUSSIONS": DiscussionsParser,
-    "ATTACHMENTS": AttachmentsParser,
-    "FOOTER": FooterParser
+    "ATTACHMENTS": AttachmentsParser
 }

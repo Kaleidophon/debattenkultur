@@ -9,14 +9,15 @@ from abc import abstractmethod
 import codecs
 
 # PROJECT
-from misc.helpers import get_config_from_py_file
+from misc.helpers import get_config_from_py_file, ProtocolParsingException
 
 
 class Parser(object):
+    position = None
 
-    def __init__(self, rules, config, parser_input):
+    def __init__(self, rules, parser_config, parser_input):
         self.rules = rules
-        self.config = config
+        self.config = parser_config
         self.parser_input = parser_input
 
     @abstractmethod
@@ -32,11 +33,11 @@ class BundesParser(Parser):
     "Meta"-parser that partitions the parliament protocol into blocks and
     applies a specific parser to each of them.
     """
-    def __init__(self, rules, config, input_path):
+    def __init__(self, rules, parser_config, input_path):
         # Init parser args from config
         self.block_divider = config.get("PROTOCOL_BLOCK_DIVIDER", ("\r\n", ))
 
-        super(BundesParser, self).__init__(rules, config, input_path)
+        super(BundesParser, self).__init__(rules, parser_config, input_path)
 
     def process(self):
         input_path = self.parser_input
@@ -44,11 +45,15 @@ class BundesParser(Parser):
         lines = [line for line in codecs.open(input_path, "r", "utf-8")]
         print len(lines)
         blocks = self._blockify(lines)
-        parsers = self._assign_parsers(blocks)
+        parsers, blocks = self._assign_parsers(blocks)
+
+        print len(blocks)
+        print len(parsers)
+        print parsers
 
         # Parse sections
-        reports = [parser.process() for parser in parsers]
-        return reports
+        #reports = [parser.process() for parser in parsers]
+        #return reports
 
     def _blockify(self, lines):
         """
@@ -80,40 +85,81 @@ class BundesParser(Parser):
 
     def _assign_parsers(self, blocks):
         from constants import SECTIONS_TO_PARSERS  # Avoid circular imports
-        parsers = []
+        parsers = [
+            SECTIONS_TO_PARSERS[section](
+                self.rules, self.config, self.parser_input
+            )
+            for section in self.config["PROTOCOL_SECTIONS"]
+        ]
 
-        for block in blocks:
-            # TODO: Magically figure out which parser is the right one
-            pass
+        # Perform some consistency checks
+        if len(parsers) > len(blocks):
+            raise ProtocolParsingException(
+                u"There are more parsers {} than blocks {} found within the "
+                u"document.".format(len(parsers), len(blocks))
+            )
+        self._check_parser_positions(parsers, len(blocks))
 
-        return parsers
+        block_parsers = [None] * len(blocks)
+        for parser in parsers:
+            block_parsers[parser.position] = parser
+
+        # Merge remaining blocks
+        _block_parsers = []
+        _blocks = []
+        for index, block_parser in enumerate(block_parsers):
+            if block_parser is None:
+                _blocks[-1].extend(blocks[index])
+            else:
+                _block_parsers.append(block_parser)
+                _blocks.append(blocks[index])
+
+        return _block_parsers, _blocks
+
+    @staticmethod
+    def _check_parser_positions(parsers, number_of_blocks):
+        parser_positions = [parser.position for parser in parsers]
+
+        for position in parser_positions:
+            if parser_positions.count(position) > 1:
+                raise ProtocolParsingException(
+                    u"At least two parsers are occupying position {}".format(
+                        position
+                    )
+                )
+
+            # Check if negative positions are already being occupied
+            if position < 0:
+                if (number_of_blocks + position) in parser_positions:
+                    raise ProtocolParsingException(
+                        u"At least two parsers are occupying position {}".format(
+                            position
+                        )
+                    )
 
 
 class HeaderParser(Parser):
-    pass
+    position = 0
 
 
 class AgendaItemsParser(Parser):
-    pass
+    position = 1
 
 
 class SessionHeaderParser(Parser):
-    pass
+    position = 2
 
 
 class DiscussionsParser(Parser):
-    pass
+    position = 3
 
 
 class AttachmentsParser(Parser):
-    pass
-
-
-class FooterParser(Parser):
-    pass
+    position = -1
 
 
 if __name__ == "__main__":
     config = get_config_from_py_file("../../config.py")
     print config
-    bp = BundesParser(config, "../../data/samples/sample.txt")
+    bp = BundesParser([], config, "../../data/samples/sample.txt")
+    bp.process()
