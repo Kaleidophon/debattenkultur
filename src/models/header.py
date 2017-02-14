@@ -15,7 +15,7 @@ from config import PROTOCOL_DATE_FORMAT
 
 class Header(Model):
 
-    def __init__(self, lines):
+    def __init__(self, **init_args):
         super(Header, self).__init__(
             not_writable={
                 "parliament", "document_type", "number", "location", "date"
@@ -24,8 +24,7 @@ class Header(Model):
                 "location": self._extract_location,
                 "date": self._extract_date
             },
-            parliament=lines[0], document_type=lines[1], number=lines[2],
-            location=lines[3], date=lines[3]
+            **init_args
         )
 
     @staticmethod

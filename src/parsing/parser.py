@@ -5,12 +5,18 @@ Parser to parse protocols of the German Bundestag.
 """
 
 # STD
-from abc import abstractmethod
 import codecs
 
 # PROJECT
-from misc.helpers import get_config_from_py_file, ProtocolParsingException
-from models.header import Header
+from misc.helpers import (
+    get_config_from_py_file,
+    ProtocolParsingException,
+    RuleApplicationException,
+    ParsingException
+)
+
+from parsing.rules import HeaderRule
+from models.model import Empty
 
 
 class Parser(object):
@@ -19,12 +25,69 @@ class Parser(object):
         self.config = parser_config
         self.parser_input = parser_input
 
-    @abstractmethod
     def process(self):
         """
-        Where the main parsing happens. Overwrite this in subclasses.
+        Main processing.
         """
-        pass
+        try:
+            return self.apply_rules()
+        except Exception, ex:
+            return Empty(ex)
+
+    def apply_rules(self):
+        """
+        Apply parsing rules to the parser's input.
+        """
+        self._check_parser_coherence()
+
+        results = []
+        rule_input = self.parser_input
+        was_applied = False
+
+        while len(results) != 1:
+            results = []
+
+            for rule in self.rules:
+                try:
+                    results.append(rule(rule_input).apply())
+                    was_applied = True
+                except RuleApplicationException:
+                    pass
+
+            # If no rules were applied, raise exception
+            if not was_applied:
+                raise ParsingException(
+                    u"No rule could be applied to the following temporary "
+                    u"results:\n{}\n\nFollowing rules were at disposal:\n{}".format(
+                        u", ".join([unicode(result) for result in results]),
+                        u", ".join([rule.__name__ for rule in self.rules])
+                    )
+                )
+
+            # Prepare for next iteration
+            rule_input = results
+            was_applied = False
+
+        return results[0]
+
+    def _check_parser_coherence(self):
+        """
+        Check if the arguments given during the initialization actually make
+        sense.
+        """
+        if len(self.rules) == 0:
+            raise ParsingException(
+                u"{} doesn't possess any rules to utilize.".format(
+                    self.__class__.__name__
+                )
+            )
+
+        if len(self.parser_input) == 0 or not self.parser_input:
+            raise ParsingException(
+                u"{} doesn't have any input to parse.".format(
+                    self.__class__.__name__
+                )
+            )
 
 
 class BundesParser(Parser):
@@ -39,6 +102,9 @@ class BundesParser(Parser):
         super(BundesParser, self).__init__(rules, parser_config, input_path)
 
     def process(self):
+        """
+        Process the protocol.
+        """
         input_path = self.parser_input
         print u"Loading file from {}...".format(input_path)
         lines = [line for line in codecs.open(input_path, "r", "utf-8")]
@@ -86,6 +152,10 @@ class BundesParser(Parser):
         return blocks
 
     def _assign_parsers(self, blocks):
+        """
+        Assign parsers to the "blocks" within the protocol. Some blocks might
+        be merged.
+        """
         from constants import SECTIONS_TO_PARSERS  # Avoid circular imports
         block_parsers = [None] * len(blocks)
         protocol_sections = self.config["PROTOCOL_SECTIONS"]
@@ -107,13 +177,17 @@ class BundesParser(Parser):
 
         for index, block_parser in enumerate(_block_parsers):
             _block_parsers[index] = _block_parsers[index](
-                self.rules, self.config, _blocks[index]
+                self.config, _blocks[index]
             )
 
         return _block_parsers, _blocks
 
     @staticmethod
     def _check_positions(protocol_sections, number_of_blocks):
+        """
+        Check if the relative and absolute positions of the pre-defined
+        sections actually line up with the blocks found in the protocol.
+        """
         positions = protocol_sections.values()
 
         for position in positions:
@@ -135,26 +209,45 @@ class BundesParser(Parser):
 
 
 class HeaderParser(Parser):
-
-    def process(self):
-        return Header(self.parser_input)
+    """
+    Special parser to parser the protocol's header.
+    """
+    def __init__(self, parser_config, parser_input):
+        super(HeaderParser, self).__init__(
+            [HeaderRule], parser_config, parser_input
+        )
 
 
 class AgendaItemsParser(Parser):
-    pass
+
+    def __init__(self, parser_config, parser_input):
+        super(AgendaItemsParser, self).__init__(
+            [], parser_config, parser_input  # TODO: Add actual rules
+        )
 
 
 class SessionHeaderParser(Parser):
-    pass
+
+    def __init__(self, parser_config, parser_input):
+        super(SessionHeaderParser, self).__init__(
+            [], parser_config, parser_input  # TODO: Add actual rules
+        )
 
 
 class DiscussionsParser(Parser):
-    pass
+
+    def __init__(self, parser_config, parser_input):
+        super(DiscussionsParser, self).__init__(
+            [], parser_config, parser_input  # TODO: Add actual rules
+        )
 
 
 class AttachmentsParser(Parser):
-    pass
 
+    def __init__(self, parser_config, parser_input):
+        super(AttachmentsParser, self).__init__(
+            [], parser_config, parser_input  # TODO: Add actual rules
+        )
 
 if __name__ == "__main__":
     config = get_config_from_py_file("../../config.py")

@@ -46,3 +46,19 @@ class ProtocolParsingException(Exception):
 
     def __init__(self, message):
         super(ProtocolParsingException, self).__init__(message)
+
+
+class RuleApplicationException(Exception):
+
+    def __init__(self, rule_name, rule_input):
+        super(RuleApplicationException, self).__init__(
+            u"Rule {} couldn't be applied to the following input {}.".format(
+                rule_name, rule_input
+            )
+        )
+
+
+class ParsingException(Exception):
+
+    def __init__(self, message):
+        super(ParsingException, self).__init__(message)

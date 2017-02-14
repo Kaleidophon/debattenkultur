@@ -56,3 +56,22 @@ class Model(object):
         if item in self.not_readable:
             raise NotReadableException(item)
         return super(Model, self).__getattribute__(item)
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __unicode__(self):
+        return self.__class__.__name__
+
+
+class Empty(Model):
+    """
+    Empty to model so in case parsing fails, not 'None's will be returned.
+    """
+    def __init__(self, exception=None):
+        init_args = {}
+        if exception:
+            init_args["expcetion"] = exception.message
+        super(Empty, self).__init__(**init_args)
+
+
