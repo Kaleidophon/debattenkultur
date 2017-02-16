@@ -27,8 +27,16 @@ class Rule(object):
         """
         Apply this rule to the rules input. Rule inputs can be
         document lines / words or models.
+
+        Rules return either a result or an exception of the application of
+        the rule to the given input failed. The result is a namedtuple
+        consisting in both the parsed data wrapped within a specific model (
+        rule_target) and the number of lines the parser has to skip now (in
+        case the rule worked with lookaheads).
         """
-        pass
+        raise RuleApplicationException(
+            self.__class__.__name__, self.rule_input
+        )
 
 
 class HeaderRule(Rule):
@@ -40,6 +48,7 @@ class HeaderRule(Rule):
 
     def apply(self):
         if len(self.rule_input) == 4:
+            # TODO: Make return namedtuple for readability
             return self.rule_target(
                 parliament=self.rule_input[0],
                 document_type=self.rule_input[1],
@@ -73,6 +82,7 @@ class AgendaItemRule(Rule):
                         ai_line = self.rule_input[ai_index]
                         if re.match(ai_pattern, ai_line):
                             # TODO: Put data into model
+                            # TODO: Make return namedtuple for readability
                             print current_ai
                             return current_ai, len(current_ai)
                         current_ai.append(ai_line)
