@@ -6,9 +6,11 @@ Parsing rules used to parse the documents.
 
 # STD
 from abc import abstractmethod
+import re
 
 # PROJECT
 from models.header import Header
+from models.agenda_item import AgendaItem
 from misc.helpers import RuleApplicationException
 
 
@@ -44,8 +46,42 @@ class HeaderRule(Rule):
                 number=self.rule_input[2],
                 location=self.rule_input[3],
                 date=self.rule_input[3]
-            )
+            ), 4
         else:
             raise RuleApplicationException(
                 self.__class__.__name__, self.rule_input
             )
+
+
+class AgendaItemRule(Rule):
+    """
+    Rule to parse AgendaItems.
+    """
+    def __init__(self, rule_input):
+        super(AgendaItemRule, self).__init__(rule_input, AgendaItem)
+
+    def apply(self):
+        ai_pattern = r"(Zusatzt|T)agesordnungspunkt \d+:"
+        current_ai = []
+        iter_input = iter(enumerate(self.rule_input))
+
+        for index, line in iter_input:
+            if isinstance(line, str) or isinstance(line, unicode):
+                if re.match(ai_pattern, line):
+                    current_ai.append(line)
+                    for ai_index in range(index+1, len(self.rule_input)):
+                        ai_line = self.rule_input[ai_index]
+                        if re.match(ai_pattern, ai_line):
+                            # TODO: Put data into model
+                            print current_ai
+                            return current_ai, len(current_ai)
+                        current_ai.append(ai_line)
+
+        raise RuleApplicationException(
+            self.__class__.__name__, self.rule_input
+        )
+
+
+
+
+
