@@ -7,11 +7,16 @@ Parsing rules used to parse the documents.
 # STD
 from abc import abstractmethod
 import re
+from collections import namedtuple
 
 # PROJECT
+from config import PROTOCOL_AGENDA_ITEM_PATTERN
 from models.header import Header
-from models.agenda_item import AgendaItem
-from misc.helpers import RuleApplicationException
+from models.agenda_item import AgendaItem, Agenda
+from misc.custom_exceptions import RuleApplicationException
+
+# Create type of named tuple to increase readability
+RuleResult = namedtuple("RuleResult", "rule_target skip_lines")
 
 
 class Rule(object):
@@ -49,13 +54,16 @@ class HeaderRule(Rule):
     def apply(self):
         if len(self.rule_input) == 4:
             # TODO: Make return namedtuple for readability
-            return self.rule_target(
-                parliament=self.rule_input[0],
-                document_type=self.rule_input[1],
-                number=self.rule_input[2],
-                location=self.rule_input[3],
-                date=self.rule_input[3]
-            ), 4
+            return RuleResult(
+                rule_target=self.rule_target(
+                    parliament=self.rule_input[0],
+                    document_type=self.rule_input[1],
+                    number=self.rule_input[2],
+                    location=self.rule_input[3],
+                    date=self.rule_input[3]
+                ),
+                skip_lines=4
+            )
         else:
             raise RuleApplicationException(
                 self.__class__.__name__, self.rule_input
@@ -70,28 +78,49 @@ class AgendaItemRule(Rule):
         super(AgendaItemRule, self).__init__(rule_input, AgendaItem)
 
     def apply(self):
-        ai_pattern = r"(Zusatzt|T)agesordnungspunkt \d+:"
+        ai_pattern = PROTOCOL_AGENDA_ITEM_PATTERN
         current_ai = []
-        iter_input = iter(enumerate(self.rule_input))
 
-        for index, line in iter_input:
+        for index, line in enumerate(self.rule_input):
             if isinstance(line, str) or isinstance(line, unicode):
                 if re.match(ai_pattern, line):
                     current_ai.append(line)
                     for ai_index in range(index+1, len(self.rule_input)):
                         ai_line = self.rule_input[ai_index]
                         if re.match(ai_pattern, ai_line):
-                            # TODO: Put data into model
-                            # TODO: Make return namedtuple for readability
-                            print current_ai
-                            return current_ai, len(current_ai)
+                            return RuleResult(
+                                rule_target=self.rule_target(
+                                    header=current_ai[0],
+                                    contents=current_ai
+                                ),
+                                skip_lines=len(current_ai)
+                            )
                         current_ai.append(ai_line)
+            else:
+                raise RuleApplicationException(
+                    self.__class__.__name__, self.rule_input
+                )
 
         raise RuleApplicationException(
             self.__class__.__name__, self.rule_input
         )
 
 
+class AgendaRule(Rule):
+    """
+    Rule to group multiple agenda items to an agenda.
+    """
+    def __init__(self, rule_input):
+        super(AgendaRule, self).__init__(rule_input, Agenda)
 
+    def apply(self):
+        for inpt in self.rule_input:
+            if not isinstance(inpt, AgendaItem):
+                raise RuleApplicationException(
+                    self.__class__.__name__, self.rule_input
+                )
 
-
+        return RuleResult(
+            rule_target=self.rule_target(self.rule_input),
+            skip_lines=len(self.rule_input)
+        )

@@ -6,11 +6,11 @@ Parser to parse protocols of the German Bundestag.
 
 # STD
 import codecs
-from itertools import dropwhile
 
 # PROJECT
-from misc.helpers import (
-    get_config_from_py_file,
+from misc.helpers import get_config_from_py_file
+from misc.custom_exceptions import (
+    CustomException,
     ProtocolParsingException,
     RuleApplicationException,
     ParsingException
@@ -18,6 +18,7 @@ from misc.helpers import (
 
 from parsing.rules import (
     HeaderRule,
+    AgendaRule,
     AgendaItemRule
 )
 from models.model import Empty
@@ -36,7 +37,10 @@ class Parser(object):
         try:
             return self.apply_rules()
         except Exception, ex:
-            return Empty(ex)
+            if isinstance(ex, CustomException):
+                return Empty(ex)
+            else:
+                raise ex
 
     def apply_rules(self):
         """
@@ -48,7 +52,10 @@ class Parser(object):
         rule_input = self.parser_input
         was_applied = False
 
+        # TODO: Include unparsed sentences in temp result
+
         while len(results) != 1:
+            print rule_input
             results = []
             input_indices = iter(range(len(rule_input)))
             skip_lines = 0
@@ -70,26 +77,26 @@ class Parser(object):
                         was_applied = True
                         break
                     except RuleApplicationException:
-                        pass
+                        continue
 
-                    # If no rules were applied, raise exception
-                    if not was_applied:
-                        raise ParsingException(
-                            u"No rule could be applied to the following "
-                            u"temporary results:\n{}\n\nFollowing rules were "
-                            u"at disposal:\n{}".format(
-                                u", ".join(
-                                    [unicode(result) for result in results]
-                                ),
-                                u", ".join(
-                                    [rule.__name__ for rule in self.rules]
-                                )
-                            )
+            # If no rules were applied, raise exception
+            if not was_applied:
+                raise ParsingException(
+                    u"No rule could be applied to the following "
+                    u"temporary results:\n{}\n\nFollowing rules were "
+                    u"at disposal:\n{}".format(
+                        u", ".join(
+                            [unicode(result) for result in results]
+                        ),
+                        u", ".join(
+                            [rule.__name__ for rule in self.rules]
                         )
+                    )
+                )
 
-                    # Prepare for next iteration
-                    rule_input = results
-                    was_applied = False
+            # Prepare for next iteration
+            rule_input = results
+            was_applied = False
 
         return results[0]
 
@@ -245,7 +252,7 @@ class AgendaItemsParser(Parser):
 
     def __init__(self, parser_config, parser_input):
         super(AgendaItemsParser, self).__init__(
-            [AgendaItemRule], parser_config, parser_input  # TODO: Add actual rules
+            [AgendaItemRule, AgendaRule], parser_config, parser_input
         )
 
 

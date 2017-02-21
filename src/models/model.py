@@ -8,7 +8,7 @@ Model superclass.
 from abc import ABCMeta
 
 # PROJECT
-from misc.helpers import NotWritableException, NotReadableException
+from misc.custom_exceptions import NotWritableException, NotReadableException
 
 
 class Model(object):
@@ -71,7 +71,7 @@ class Empty(Model):
     def __init__(self, exception=None):
         init_args = {}
         if exception:
-            init_args["expcetion"] = exception.message
+            init_args["exception"] = exception.message
         super(Empty, self).__init__(**init_args)
 
 

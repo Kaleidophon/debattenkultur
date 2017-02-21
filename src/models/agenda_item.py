@@ -4,19 +4,88 @@
 Model for an item of the agenda of the meeting.
 """
 
+# STD
+import re
+
 # PROJECT
+from config import (
+    PROTOCOL_AGENDA_ITEM_PATTERN,
+    PROTOCOL_AGENDA_SUBITEM_PATTERN,
+    PROTOCOL_AGENDA_SUBITEM_ITEMTYPE
+)
 from models.model import Model
+
+
+class Agenda(Model):
+    """
+    Model to group multiple agenda items into an agenda.
+    """
+    items = []
+
+    def __init__(self, items):
+        super(Agenda, self).__init__(items=items)
 
 
 class AgendaItem(Model):
     """
     Model for an agenda item on the agenda of the German Bundestag's proceeding.
     """
-    meta = {}
-    contents = []
+    item_type = None
+    number = None
+    speakers = []
+    subitems = []
 
-    def __init__(self, meta, contents):
-        super(AgendaItem, self).__init__(meta=meta, contents=contents)
+    def __init__(self, header, contents):
+        super(AgendaItem, self).__init__(
+            item_type=header,
+            item_number=header,
+            subitems=contents,
+            formatting_functions={
+                "item_type": self._get_agenda_item_type,
+                "item_number": self._get_agenda_item_number,
+                "subitems": self._split_agenda_subitems
+            }
+        )
+
+    @staticmethod
+    def _get_agenda_item_type(header):
+        if re.match(PROTOCOL_AGENDA_ITEM_PATTERN, header):
+            return header.replace(":", "").split(" ")[0]
+        elif re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, header):
+            return PROTOCOL_AGENDA_SUBITEM_ITEMTYPE
+
+    @staticmethod
+    def _get_agenda_item_number(header):
+        if re.match(PROTOCOL_AGENDA_ITEM_PATTERN, header):
+            return int(header.replace(":", "").split(" ")[1])
+        elif re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, header):
+            return header.split("\t")[0].replace(")", "").upper()
+
+    @staticmethod
+    def _split_agenda_subitems(contents):
+        contents.pop(0)  # Remove header
+        subitems = []
+        current_subitem = []
+
+        for line in contents:
+            if re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, line):
+                if current_subitem:
+                    subitems.append(
+                        AgendaItem(
+                            header=current_subitem[0],
+                            contents=current_subitem
+                        )
+                    )
+                current_subitem = [line]
+            else:
+                current_subitem.append(line)
+
+        if len(subitems) == 0:
+            subitems = contents
+
+        #print subitems
+
+        return subitems
 
 
 class AgendaContent(Model):

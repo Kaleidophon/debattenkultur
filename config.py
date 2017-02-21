@@ -9,3 +9,6 @@ PROTOCOL_SECTIONS = {
 	"ATTACHMENTS": -1  # Everything before belongs to DISCUSSIONS
 }
 PROTOCOL_DATE_FORMAT = '%A, den %d. %B %Y'
+PROTOCOL_AGENDA_ITEM_PATTERN = r"(Zusatzt|T)agesordnungspunkt \d+:"
+PROTOCOL_AGENDA_SUBITEM_PATTERN = r"\w\)\t.+"
+PROTOCOL_AGENDA_SUBITEM_ITEMTYPE = "Untertagesordnungspunkt"
