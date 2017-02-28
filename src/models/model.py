@@ -58,10 +58,16 @@ class Model(object):
         return super(Model, self).__getattribute__(item)
 
     def __str__(self):
-        return self.__class__.__name__
+        return "<{} #{}>".format(
+            self.__class__.__name__,
+            id(self)
+        )
 
     def __unicode__(self):
-        return self.__class__.__name__
+        return u"<{} #{}>".format(
+            self.__class__.__name__,
+            id(self)
+        )
 
 
 class Empty(Model):

@@ -12,3 +12,4 @@ PROTOCOL_DATE_FORMAT = '%A, den %d. %B %Y'
 PROTOCOL_AGENDA_ITEM_PATTERN = r"(Zusatzt|T)agesordnungspunkt \d+:"
 PROTOCOL_AGENDA_SUBITEM_PATTERN = r"\w\)\t.+"
 PROTOCOL_AGENDA_SUBITEM_ITEMTYPE = "Untertagesordnungspunkt"
+PROTOCOL_AGENDA_ATTACHMENT_PATTERN = r"Anlage \d+"

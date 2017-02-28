@@ -19,7 +19,9 @@ from misc.custom_exceptions import (
 from parsing.rules import (
     HeaderRule,
     AgendaRule,
-    AgendaItemRule
+    AgendaItemRule,
+    AgendaAttachmentRule,
+    AgendaCommentRule
 )
 from models.model import Empty
 
@@ -40,7 +42,7 @@ class Parser(object):
             if isinstance(ex, CustomException):
                 return Empty(ex)
             else:
-                raise ex
+                raise
 
     def apply_rules(self):
         """
@@ -50,12 +52,12 @@ class Parser(object):
 
         results = []
         rule_input = self.parser_input
-        was_applied = False
-
-        # TODO: Include unparsed sentences in temp result
+        was_applied_global = False
+        was_applied_local = False
 
         while len(results) != 1:
-            print rule_input
+            # TODO: Remove this debug statement
+
             results = []
             input_indices = iter(range(len(rule_input)))
             skip_lines = 0
@@ -74,13 +76,23 @@ class Parser(object):
                             rule_input[input_index:]  # Only use slice
                         ).apply()
                         results.append(result)
-                        was_applied = True
+                        was_applied_global = True
+                        was_applied_local = True
                         break
                     except RuleApplicationException:
                         continue
 
+                if not was_applied_local:
+                    results.append(rule_input[input_index])
+
+                was_applied_local = False
+
             # If no rules were applied, raise exception
-            if not was_applied:
+            if not was_applied_global:
+                for inp in rule_input:
+                    print inp
+                print ""
+
                 raise ParsingException(
                     u"No rule could be applied to the following "
                     u"temporary results:\n{}\n\nFollowing rules were "
@@ -96,7 +108,7 @@ class Parser(object):
 
             # Prepare for next iteration
             rule_input = results
-            was_applied = False
+            was_applied_global = False
 
         return results[0]
 
@@ -252,7 +264,14 @@ class AgendaItemsParser(Parser):
 
     def __init__(self, parser_config, parser_input):
         super(AgendaItemsParser, self).__init__(
-            [AgendaItemRule, AgendaRule], parser_config, parser_input
+            [
+                AgendaItemRule
+                #AgendaRule,
+                #AgendaAttachmentRule
+                #AgendaCommentRule  # TODO: Re-add this rule
+            ],
+            parser_config,
+            parser_input
         )
 
 

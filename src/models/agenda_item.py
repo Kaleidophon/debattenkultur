@@ -83,9 +83,28 @@ class AgendaItem(Model):
         if len(subitems) == 0:
             subitems = contents
 
-        #print subitems
-
         return subitems
+
+
+class AgendaComment(Model):
+    """
+    Model for comments about the protocol's agenda.
+    """
+    comment = None
+    identifier = None
+
+    def __init__(self, contents):
+        super(AgendaComment, self).__init__(
+            identifier=contents[0],
+            comment=contents[1]
+        )
+
+
+class AgendaAttachment(Model):
+    """
+    Model for attachments to the protocol's agenda.
+    """
+    pass
 
 
 class AgendaContent(Model):

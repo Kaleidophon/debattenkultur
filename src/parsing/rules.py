@@ -10,9 +10,18 @@ import re
 from collections import namedtuple
 
 # PROJECT
-from config import PROTOCOL_AGENDA_ITEM_PATTERN
+from config import (
+    PROTOCOL_AGENDA_ITEM_PATTERN,
+    PROTOCOL_AGENDA_ATTACHMENT_PATTERN
+)
+from models.model import Model
 from models.header import Header
-from models.agenda_item import AgendaItem, Agenda
+from models.agenda_item import (
+    AgendaItem,
+    Agenda,
+    AgendaAttachment,
+    AgendaComment
+)
 from misc.custom_exceptions import RuleApplicationException
 
 # Create type of named tuple to increase readability
@@ -39,9 +48,53 @@ class Rule(object):
         rule_target) and the number of lines the parser has to skip now (in
         case the rule worked with lookaheads).
         """
+        self._application_failed()
+
+    def _look_ahead_until_next_match(self, pattern, rule_input):
+        """
+        Make lookaheads until you encounter the next elements that matches
+        the pattern. Otherwise return None.:
+        """
+        current_element = []
+
+        for i, iline in enumerate(rule_input):
+            if self._element_matches_pattern(pattern, iline) or \
+                    self._is_parsed(iline):
+                current_element.append(iline)
+                for j in range(i + 1, len(rule_input)):
+                    jline = rule_input[j]
+                    if self._element_matches_pattern(pattern, jline) or \
+                            self._is_parsed(jline):
+                        return RuleResult(
+                            rule_target=self.rule_target(
+                                header=current_element[0],
+                                contents=current_element
+                            ),
+                            skip_lines=len(current_element)
+                        )
+                    current_element.append(jline)
+            else:
+                break
+
+        self._application_failed()
+
+    def _application_failed(self):
+        """
+        Raise error if the application of the rule failed.
+        """
         raise RuleApplicationException(
             self.__class__.__name__, self.rule_input
         )
+
+    @staticmethod
+    def _element_matches_pattern(pattern, input_element):
+        if isinstance(input_element, str) or isinstance(input_element, unicode):
+            return re.match(pattern, input_element)
+        return False
+
+    @staticmethod
+    def _is_parsed(input_element):
+        return isinstance(input_element, Model)
 
 
 class HeaderRule(Rule):
@@ -53,7 +106,6 @@ class HeaderRule(Rule):
 
     def apply(self):
         if len(self.rule_input) == 4:
-            # TODO: Make return namedtuple for readability
             return RuleResult(
                 rule_target=self.rule_target(
                     parliament=self.rule_input[0],
@@ -65,9 +117,7 @@ class HeaderRule(Rule):
                 skip_lines=4
             )
         else:
-            raise RuleApplicationException(
-                self.__class__.__name__, self.rule_input
-            )
+            self._application_failed()
 
 
 class AgendaItemRule(Rule):
@@ -78,31 +128,56 @@ class AgendaItemRule(Rule):
         super(AgendaItemRule, self).__init__(rule_input, AgendaItem)
 
     def apply(self):
-        ai_pattern = PROTOCOL_AGENDA_ITEM_PATTERN
-        current_ai = []
+        return self._look_ahead_until_next_match(
+            PROTOCOL_AGENDA_ITEM_PATTERN,
+            self.rule_input
+        )
 
-        for index, line in enumerate(self.rule_input):
-            if isinstance(line, str) or isinstance(line, unicode):
-                if re.match(ai_pattern, line):
-                    current_ai.append(line)
-                    for ai_index in range(index+1, len(self.rule_input)):
-                        ai_line = self.rule_input[ai_index]
-                        if re.match(ai_pattern, ai_line):
-                            return RuleResult(
-                                rule_target=self.rule_target(
-                                    header=current_ai[0],
-                                    contents=current_ai
-                                ),
-                                skip_lines=len(current_ai)
-                            )
-                        current_ai.append(ai_line)
-            else:
-                raise RuleApplicationException(
-                    self.__class__.__name__, self.rule_input
-                )
 
-        raise RuleApplicationException(
-            self.__class__.__name__, self.rule_input
+class AgendaCommentRule(Rule):
+    """
+    Rule to parse a comment to the agenda.
+    """
+    def __init__(self, rule_input):
+        super(AgendaCommentRule, self).__init__(rule_input, AgendaComment)
+
+    def apply(self):
+        if not len(self.rule_input) > 2:
+            self._application_failed()
+
+        if self._doesnt_match_any_agenda_pattern(self.rule_input[0]) and \
+                self._doesnt_match_any_agenda_pattern(self.rule_input[1]):
+            return RuleResult(
+                rule_target=self.rule_target(
+                    contents=self.rule_input
+                ),
+                skip_lines=1
+            )
+        else:
+            self._application_failed()
+
+    def _doesnt_match_any_agenda_pattern(self, input_element):
+        return not self._element_matches_pattern(
+            PROTOCOL_AGENDA_ITEM_PATTERN, input_element
+        ) and not self._element_matches_pattern(
+            PROTOCOL_AGENDA_ATTACHMENT_PATTERN, input_element
+        )
+
+
+class AgendaAttachmentRule(Rule):
+    """
+    Rule to parse Attachments to the Agenda.
+    """
+    def __init__(self, rule_input):
+        super(AgendaAttachmentRule, self).__init__(
+            rule_input,
+            AgendaAttachment
+        )
+
+    def apply(self):
+        return self._look_ahead_until_next_match(
+            PROTOCOL_AGENDA_ATTACHMENT_PATTERN,
+            self.rule_input
         )
 
 
@@ -116,9 +191,7 @@ class AgendaRule(Rule):
     def apply(self):
         for inpt in self.rule_input:
             if not isinstance(inpt, AgendaItem):
-                raise RuleApplicationException(
-                    self.__class__.__name__, self.rule_input
-                )
+                self._application_failed()
 
         return RuleResult(
             rule_target=self.rule_target(self.rule_input),
