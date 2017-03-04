@@ -31,14 +31,23 @@ RuleResult = namedtuple("RuleResult", "rule_target skip_lines")
 # TODO: Add rule "triggers"
 
 
+class RuleTrigger(object):
+    # TODO: Implement Trigger logic
+    pass
+
 
 class Rule(object):
     """
     Superclass for parsing rules.
     """
-    def __init__(self, rule_input, rule_target):
+    rule_input = None
+    rule_target = None
+    rule_trigger = None
+
+    def __init__(self, rule_input, rule_target, rule_trigger):
         self.rule_input = rule_input
         self.rule_target = rule_target
+        self.rule_trigger = rule_trigger
 
     @abstractmethod
     def apply(self):
@@ -60,6 +69,8 @@ class Rule(object):
         the pattern. Otherwise return None.:
         """
         current_element = []
+
+        # TODO: Rewrite so it looks ahead until next non-Filler appears
 
         for i, iline in enumerate(rule_input):
             if self._element_matches_pattern(pattern, iline) or \
@@ -90,6 +101,7 @@ class Rule(object):
             self.__class__.__name__, self.rule_input
         )
 
+    # TODO: Replace this with RuleTrigger logic
     @staticmethod
     def _element_matches_pattern(pattern, input_element):
         if isinstance(input_element, str) or isinstance(input_element, unicode):
@@ -100,6 +112,14 @@ class Rule(object):
     def _is_parsed(input_element):
         return isinstance(input_element, Model)
 
+    def triggers(self, line):
+        # TODO: Implement
+        pass
+
+    def expand(self, tokens):
+        # TODO: Implement
+        pass
+
 
 class HeaderRule(Rule):
     """
@@ -108,6 +128,7 @@ class HeaderRule(Rule):
     def __init__(self, rule_input):
         super(HeaderRule, self).__init__(rule_input, Header)
 
+    # TODO: Refactor
     def apply(self):
         if len(self.rule_input) == 4:
             return RuleResult(
@@ -131,6 +152,7 @@ class AgendaItemRule(Rule):
     def __init__(self, rule_input):
         super(AgendaItemRule, self).__init__(rule_input, AgendaItem)
 
+    # TODO: Refactor
     def apply(self):
         return self._look_ahead_until_next_match(
             PROTOCOL_AGENDA_ITEM_PATTERN,
@@ -145,6 +167,7 @@ class AgendaCommentRule(Rule):
     def __init__(self, rule_input):
         super(AgendaCommentRule, self).__init__(rule_input, AgendaComment)
 
+    # TODO: Refactor
     def apply(self):
         if not len(self.rule_input) > 2:
             self._application_failed()
@@ -160,6 +183,7 @@ class AgendaCommentRule(Rule):
         else:
             self._application_failed()
 
+    # TODO: Refactor
     def _doesnt_match_any_agenda_pattern(self, input_element):
         return not self._element_matches_pattern(
             PROTOCOL_AGENDA_ITEM_PATTERN, input_element
@@ -178,6 +202,7 @@ class AgendaAttachmentRule(Rule):
             AgendaAttachment
         )
 
+    # TODO: Refactor
     def apply(self):
         return self._look_ahead_until_next_match(
             PROTOCOL_AGENDA_ATTACHMENT_PATTERN,
@@ -192,6 +217,7 @@ class AgendaRule(Rule):
     def __init__(self, rule_input):
         super(AgendaRule, self).__init__(rule_input, Agenda)
 
+    # TODO: Refactor
     def apply(self):
         for inpt in self.rule_input:
             if not isinstance(inpt, AgendaItem):

@@ -28,6 +28,7 @@ respective versions of the project.
 * Port to Python 3.6
 * Change project structure
 * Add semantic versioning
+* Refactor some code
 
 ### v0.4
 

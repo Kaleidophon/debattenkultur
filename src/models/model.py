@@ -82,6 +82,10 @@ class Empty(Model):
 
 
 class Filler(Model):
-
+    """
+    Model for filler lines that didn't trigger any parsing rules.
+    """
+    def __init__(self, line):
+        super(Filler, self).__init__({"line": line})
 
 

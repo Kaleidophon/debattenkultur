@@ -23,7 +23,7 @@ from parsing.rules import (
     AgendaAttachmentRule,
     AgendaCommentRule
 )
-from models.model import Empty
+from models.model import Empty, Filler
 
 
 class Parser(object):
@@ -37,6 +37,7 @@ class Parser(object):
         Main processing.
         """
         try:
+            self.lex()
             return self.apply_rules()
         except Exception, ex:
             if isinstance(ex, CustomException):
@@ -45,7 +46,9 @@ class Parser(object):
                 raise
 
     def lex(self):
-        pass
+        # TODO: Implement lexer
+        for line in self.parser_input:
+            pass
 
 
     def apply_rules(self):
@@ -54,8 +57,9 @@ class Parser(object):
         """
         self._check_parser_coherence()
 
+        # TODO: Rewrite rule logic:
+        # Let rules "eat up" Filler lines.
         pass
-
 
     def _check_parser_coherence(self):
         """
