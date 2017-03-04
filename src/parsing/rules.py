@@ -28,6 +28,10 @@ from misc.custom_exceptions import RuleApplicationException
 RuleResult = namedtuple("RuleResult", "rule_target skip_lines")
 
 
+# TODO: Add rule "triggers"
+
+
+
 class Rule(object):
     """
     Superclass for parsing rules.

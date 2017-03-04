@@ -49,17 +49,21 @@ class AgendaItem(Model):
 
     @staticmethod
     def _get_agenda_item_type(header):
-        if re.match(PROTOCOL_AGENDA_ITEM_PATTERN, header):
-            return header.replace(":", "").split(" ")[0]
-        elif re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, header):
-            return PROTOCOL_AGENDA_SUBITEM_ITEMTYPE
+        if not isinstance(header, Model):
+            if re.match(PROTOCOL_AGENDA_ITEM_PATTERN, header):
+                return header.replace(":", "").split(" ")[0]
+            elif re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, header):
+                return PROTOCOL_AGENDA_SUBITEM_ITEMTYPE
+        return header
 
     @staticmethod
     def _get_agenda_item_number(header):
-        if re.match(PROTOCOL_AGENDA_ITEM_PATTERN, header):
-            return int(header.replace(":", "").split(" ")[1])
-        elif re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, header):
-            return header.split("\t")[0].replace(")", "").upper()
+        if not isinstance(header, Model):
+            if re.match(PROTOCOL_AGENDA_ITEM_PATTERN, header):
+                return int(header.replace(":", "").split(" ")[1])
+            elif re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, header):
+                return header.split("\t")[0].replace(")", "").upper()
+        return header
 
     @staticmethod
     def _split_agenda_subitems(contents):

@@ -44,73 +44,18 @@ class Parser(object):
             else:
                 raise
 
+    def lex(self):
+        pass
+
+
     def apply_rules(self):
         """
         Apply parsing rules to the parser's input.
         """
         self._check_parser_coherence()
 
-        results = []
-        rule_input = self.parser_input
-        was_applied_global = False
-        was_applied_local = False
+        pass
 
-        while len(results) != 1:
-            # TODO: Remove this debug statement
-
-            results = []
-            input_indices = iter(range(len(rule_input)))
-            skip_lines = 0
-
-            for input_index in input_indices:
-                # Skip lines if a rule used lookaheads
-                if skip_lines > 0:
-                    skip_lines -= 1
-                    continue
-
-                for rule in self.rules:
-                    # Try to apply a rule. If success, save result and
-                    # continue with the remaining block
-                    try:
-                        result, skip_lines = rule(
-                            rule_input[input_index:]  # Only use slice
-                        ).apply()
-                        results.append(result)
-                        was_applied_global = True
-                        was_applied_local = True
-                        break
-                    except RuleApplicationException:
-                        continue
-
-                if not was_applied_local:
-                    results.append(rule_input[input_index])
-
-                was_applied_local = False
-
-            # If no rules were applied, raise exception
-            if not was_applied_global:
-                for inp in rule_input:
-                    print inp
-                print ""
-
-                raise ParsingException(
-                    u"No rule could be applied to the following "
-                    u"temporary results:\n{}\n\nFollowing rules were "
-                    u"at disposal:\n{}".format(
-                        u", ".join(
-                            [unicode(result) for result in results]
-                        ),
-                        u", ".join(
-                            [rule.__name__ for rule in self.rules]
-                        )
-                    )
-                )
-
-            # Prepare for next iteration
-            rule_input = results
-            was_applied_global = False
-
-        return results[0]
 
     def _check_parser_coherence(self):
         """

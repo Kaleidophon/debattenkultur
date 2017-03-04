@@ -25,44 +25,49 @@ respective versions of the project.
 * Wrap the content up within the different models in a structured manner
 
 ### v0.3
+* Port to Python 3.6
+* Change project structure
+* Add semantic versioning
+
+### v0.4
 
 * Create a MongoDB in the project folder
 * Create some code that specifically writes data into MongoDB
 
-### v0.4
+### v0.5
 
 * Write daemon that updates the database on a regular basis
 * A warning should be written into the log if daemon doesn't add new entries
 to the database for a while
 
-### v0.5
+### v0.6
 
 * Think of good class hierarchy for data analysis modules
 * Implement superclass
 
-### v0.6
+### v0.7
 
 * Add data analysis for word frequencies per speaker / faction
 * Add data analysis for interruptions by faction
 * Find elegant ways to add those to the database
 
-### v0.7
+### v0.8
 
 * Add Flask App
 * Add logging
 * Add exception handling
 
-### v0.8
+### v0.9
 
 * Think of a good website structure
 * Add templates and views for app
 
-### v0.9
+### v0.10
 
 * Add frontend using Bootstrap
 * Visualize data
 
-### v0.10
+### v0.11
 
 * Add unittests
 * Compose project using docker

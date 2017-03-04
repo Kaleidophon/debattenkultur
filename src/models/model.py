@@ -81,3 +81,7 @@ class Empty(Model):
         super(Empty, self).__init__(**init_args)
 
 
+class Filler(Model):
+
+
+
