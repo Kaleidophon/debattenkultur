@@ -25,6 +25,8 @@ from parsing.rules import (
     AgendaCommentRule
 )
 from models.model import Empty, Filler
+from models.agenda_item import Agenda, Protocol
+from models.header import Header
 
 
 class Parser(object):
@@ -122,11 +124,14 @@ class BundesParser(Parser):
     "Meta"-parser that partitions the parliament protocol into blocks and
     applies a specific parser to each of them.
     """
+
     def __init__(self, rule_classes, parser_config, input_path):
         # Init parser args from config
         self.block_divider = config.get("PROTOCOL_BLOCK_DIVIDER", ("\r\n", ))
 
-        super(BundesParser, self).__init__(rule_classes, parser_config, input_path)
+        super(BundesParser, self).__init__(
+            rule_classes, parser_config, input_path, parser_target=Protocol
+        )
 
     def process(self):
         """
@@ -247,7 +252,7 @@ class HeaderParser(Parser):
 
 
 class AgendaItemsParser(Parser):
-    # TODO (Refactor): Add parser target
+    # TODO (Refactor): Add missing documentation
     def __init__(self, parser_config, parser_input):
         super(AgendaItemsParser, self).__init__(
             [
@@ -257,31 +262,41 @@ class AgendaItemsParser(Parser):
                 #AgendaCommentRule  # TODO: Re-add this rule
             ],
             parser_config,
-            parser_input
+            parser_input,
+            parser_target=Agenda
         )
 
 
 class SessionHeaderParser(Parser):
-    # TODO (Refactor): Add parser target
+    # TODO (Refactor): Add missing documentation
     def __init__(self, parser_config, parser_input):
         super(SessionHeaderParser, self).__init__(
-            [], parser_config, parser_input  # TODO: Add actual rules
+            [],  # TODO: Add actual rules
+            parser_config,
+            parser_input,
+            parser_target=Header
         )
 
 
 class DiscussionsParser(Parser):
+    # TODO (Refactor): Add missing documentation
     # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
         super(DiscussionsParser, self).__init__(
-            [], parser_config, parser_input  # TODO: Add actual rules
+            [], # TODO: Add actual rules
+            parser_config,
+            parser_input
         )
 
 
 class AttachmentsParser(Parser):
+    # TODO (Refactor): Add missing documentation
     # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
         super(AttachmentsParser, self).__init__(
-            [], parser_config, parser_input  # TODO: Add actual rules
+            [],  # TODO: Add actual rules
+            parser_config,
+            parser_input
         )
 
 if __name__ == "__main__":

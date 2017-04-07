@@ -16,6 +16,17 @@ from config import (
 from models.model import Model
 
 
+class Protocol(Model):
+    """
+    Global model to contain all other models.
+    """
+    # TODO (Refactor): Add validation
+    items = []
+
+    def __init__(self, items):
+        super(Model, self).__init__(items=items)
+
+
 class Agenda(Model):
     """
     Model to group multiple agenda items into an agenda.

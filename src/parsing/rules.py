@@ -92,6 +92,7 @@ class HeaderRule(Rule):
     Single easy rule to parse the protocol header in one go.
     """
     def __init__(self, rule_input):
+        # TODO (Refactor): Add rule trigger
         super(HeaderRule, self).__init__(rule_input, Header)
 
     def apply(self):
@@ -112,6 +113,7 @@ class AgendaItemRule(Rule):
     Rule to parse AgendaItems.
     """
     def __init__(self, rule_input):
+        # TODO (Refactor): Add rule trigger
         super(AgendaItemRule, self).__init__(rule_input, AgendaItem)
 
 
@@ -120,6 +122,7 @@ class AgendaCommentRule(Rule):
     Rule to parse a comment to the agenda.
     """
     def __init__(self, rule_input):
+        # TODO (Refactor): Add rule trigger
         super(AgendaCommentRule, self).__init__(rule_input, AgendaComment)
 
     def apply(self):
@@ -152,6 +155,7 @@ class AgendaAttachmentRule(Rule):
     Rule to parse Attachments to the Agenda.
     """
     def __init__(self, rule_input):
+        # TODO (Refactor): Add rule trigger
         super(AgendaAttachmentRule, self).__init__(
             rule_input,
             AgendaAttachment
