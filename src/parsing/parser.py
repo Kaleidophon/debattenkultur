@@ -17,6 +17,7 @@ from misc.custom_exceptions import (
 )
 
 from parsing.rules import (
+    Rule,
     HeaderRule,
     AgendaRule,
     AgendaItemRule,
@@ -27,10 +28,13 @@ from models.model import Empty, Filler
 
 
 class Parser(object):
-    def __init__(self, rules, parser_config, parser_input):
-        self.rules = rules
+    lexed_parser_input = None
+
+    def __init__(self, rule_classes, parser_config, parser_input, parser_target):
+        self.rule_classes = rule_classes
         self.config = parser_config
         self.parser_input = parser_input
+        self.parser_target = parser_target
 
     def process(self):
         """
@@ -46,10 +50,24 @@ class Parser(object):
                 raise
 
     def lex(self):
-        # TODO: Implement lexer
-        for line in self.parser_input:
-            pass
+        """
+        Divide up lines into either
 
+        a) Parsing rules that trigger for a certain line (a specific regex
+           matches and indicates the beginning of a certain new block)
+        b) A filler line that will be attributed to the most recent triggered
+           rule in the next step
+        """
+        self.lexed_parser_input = []
+
+        for line in self.parser_input:
+            for rule_class in self.rule_classes:
+                rule = rule_class(line)
+                if rule.triggers(line):
+                    self.lexed_parser_input.append(rule)
+                    break
+            else:
+                self.lexed_parser_input.append(Filler(line))
 
     def apply_rules(self):
         """
@@ -57,16 +75,34 @@ class Parser(object):
         """
         self._check_parser_coherence()
 
-        # TODO: Rewrite rule logic:
-        # Let rules "eat up" Filler lines.
-        pass
+        # 1. Add filler lines to most recent rules
+        reduced_parser_input = []
+        current_rule = None
+        for lexed_input in self.lexed_parser_input:
+            # Lexed input is rule
+            if isinstance(lexed_input, Rule):
+                if current_rule:
+                    reduced_parser_input.append(lexed_input)
+                current_rule = lexed_input
+            # Lexed input is filler
+            else:
+                current_rule.expand(lexed_input)
+
+        # 2. Let rules apply their logic to their new, expanded input and
+        # turn them into their target models, depending on the kind of block
+        modeled_parser_output = []
+        for rule in reduced_parser_input:
+            modeled_parser_output.append(rule.apply())
+
+        # 3. Combine all of these targets into the parsers target model
+        return self.parser_target(*modeled_parser_output)
 
     def _check_parser_coherence(self):
         """
         Check if the arguments given during the initialization actually make
         sense.
         """
-        if len(self.rules) == 0:
+        if len(self.rule_classes) == 0:
             raise ParsingException(
                 u"{} doesn't possess any rules to utilize.".format(
                     self.__class__.__name__
@@ -86,11 +122,11 @@ class BundesParser(Parser):
     "Meta"-parser that partitions the parliament protocol into blocks and
     applies a specific parser to each of them.
     """
-    def __init__(self, rules, parser_config, input_path):
+    def __init__(self, rule_classes, parser_config, input_path):
         # Init parser args from config
         self.block_divider = config.get("PROTOCOL_BLOCK_DIVIDER", ("\r\n", ))
 
-        super(BundesParser, self).__init__(rules, parser_config, input_path)
+        super(BundesParser, self).__init__(rule_classes, parser_config, input_path)
 
     def process(self):
         """
@@ -203,6 +239,7 @@ class HeaderParser(Parser):
     """
     Special parser to parser the protocol's header.
     """
+    # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
         super(HeaderParser, self).__init__(
             [HeaderRule], parser_config, parser_input
@@ -210,7 +247,7 @@ class HeaderParser(Parser):
 
 
 class AgendaItemsParser(Parser):
-
+    # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
         super(AgendaItemsParser, self).__init__(
             [
@@ -225,7 +262,7 @@ class AgendaItemsParser(Parser):
 
 
 class SessionHeaderParser(Parser):
-
+    # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
         super(SessionHeaderParser, self).__init__(
             [], parser_config, parser_input  # TODO: Add actual rules
@@ -233,7 +270,7 @@ class SessionHeaderParser(Parser):
 
 
 class DiscussionsParser(Parser):
-
+    # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
         super(DiscussionsParser, self).__init__(
             [], parser_config, parser_input  # TODO: Add actual rules
@@ -241,7 +278,7 @@ class DiscussionsParser(Parser):
 
 
 class AttachmentsParser(Parser):
-
+    # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
         super(AttachmentsParser, self).__init__(
             [], parser_config, parser_input  # TODO: Add actual rules

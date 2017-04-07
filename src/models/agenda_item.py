@@ -20,6 +20,7 @@ class Agenda(Model):
     """
     Model to group multiple agenda items into an agenda.
     """
+    # TODO (Refactor): Add validation
     items = []
 
     def __init__(self, items):
@@ -30,6 +31,7 @@ class AgendaItem(Model):
     """
     Model for an agenda item on the agenda of the German Bundestag's proceeding.
     """
+    # TODO (Refactor): Add validation
     item_type = None
     number = None
     speakers = []
@@ -94,6 +96,7 @@ class AgendaComment(Model):
     """
     Model for comments about the protocol's agenda.
     """
+    # TODO (Refactor): Add validation
     comment = None
     identifier = None
 
@@ -108,6 +111,7 @@ class AgendaAttachment(Model):
     """
     Model for attachments to the protocol's agenda.
     """
+    # TODO (Refactor): Add validation
     pass
 
 
@@ -115,6 +119,7 @@ class AgendaContent(Model):
     """
     Superclass for the different kind of things bundled up in an agenda item.
     """
+    # TODO (Refactor): Add validation
     originator = None
     content = None
 
@@ -128,6 +133,7 @@ class Speech(AgendaContent):
     """
     Model for a speech in parliament.
     """
+    # TODO (Refactor): Add validation
     def __init__(self, originator, content):
         super(Speech, self).__init__(originator, content)
 
@@ -136,6 +142,7 @@ class Action(AgendaContent):
     """
     Model for any action which is not a speech or an introduction.
     """
+    # TODO (Refactor): Add validation
     def __init__(self, originator, content, action_type):
         self.type = action_type
         super(Action, self).__init__(originator, content)
@@ -145,5 +152,6 @@ class Introduction(AgendaContent):
     """
     Model for an introduction at the beginning of an agenda item.
     """
+    # TODO (Refactor): Add validation
     def __init__(self, originator, content):
         super(Introduction, self).__init__(originator, content)

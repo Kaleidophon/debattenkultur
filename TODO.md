@@ -73,6 +73,10 @@ to the database for a while
 * Add unittests
 * Compose project using docker
 
+### v0.12
+* Write meaningful README
+* Add documentation
+
 ### v1.0
 
 * Deploy the app online

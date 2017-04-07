@@ -5,17 +5,15 @@ Parsing rules used to parse the documents.
 """
 
 # STD
-from abc import abstractmethod
 import re
-from collections import namedtuple
 
 # PROJECT
 from config import (
     PROTOCOL_AGENDA_ITEM_PATTERN,
     PROTOCOL_AGENDA_ATTACHMENT_PATTERN
 )
-from models.model import Model
 from models.header import Header
+from models.model import Filler
 from models.agenda_item import (
     AgendaItem,
     Agenda,
@@ -24,16 +22,15 @@ from models.agenda_item import (
 )
 from misc.custom_exceptions import RuleApplicationException
 
-# Create type of named tuple to increase readability
-RuleResult = namedtuple("RuleResult", "rule_target skip_lines")
-
-
-# TODO: Add rule "triggers"
-
 
 class RuleTrigger(object):
-    # TODO: Implement Trigger logic
-    pass
+    trigger_regex = None
+
+    def __init__(self, trigger_regex):
+        self.trigger_regex = trigger_regex
+
+    def check(self, line):
+        return re.match(self.trigger_regex, line) is not None
 
 
 class Rule(object):
@@ -49,76 +46,45 @@ class Rule(object):
         self.rule_target = rule_target
         self.rule_trigger = rule_trigger
 
-    @abstractmethod
     def apply(self):
         """
         Apply this rule to the rules input. Rule inputs can be
-        document lines / words or models.
-
-        Rules return either a result or an exception of the application of
-        the rule to the given input failed. The result is a namedtuple
-        consisting in both the parsed data wrapped within a specific model (
-        rule_target) and the number of lines the parser has to skip now (in
-        case the rule worked with lookaheads).
+        document lines.
         """
-        self._application_failed()
+        try:
+            self.prepare_rule_input()
+            return self.rule_target(self.rule_input)
+        except Exception as e:
+            self._application_failed(e)
 
-    def _look_ahead_until_next_match(self, pattern, rule_input):
-        """
-        Make lookaheads until you encounter the next elements that matches
-        the pattern. Otherwise return None.:
-        """
-        current_element = []
-
-        # TODO: Rewrite so it looks ahead until next non-Filler appears
-
-        for i, iline in enumerate(rule_input):
-            if self._element_matches_pattern(pattern, iline) or \
-                    self._is_parsed(iline):
-                current_element.append(iline)
-                for j in range(i + 1, len(rule_input)):
-                    jline = rule_input[j]
-                    if self._element_matches_pattern(pattern, jline) or \
-                            self._is_parsed(jline):
-                        return RuleResult(
-                            rule_target=self.rule_target(
-                                header=current_element[0],
-                                contents=current_element
-                            ),
-                            skip_lines=len(current_element)
-                        )
-                    current_element.append(jline)
-            else:
-                break
-
-        self._application_failed()
-
-    def _application_failed(self):
+    def _application_failed(self, reason):
         """
         Raise error if the application of the rule failed.
         """
         raise RuleApplicationException(
-            self.__class__.__name__, self.rule_input
+            self.__class__.__name__, self.rule_input, reason
         )
 
-    # TODO: Replace this with RuleTrigger logic
-    @staticmethod
-    def _element_matches_pattern(pattern, input_element):
-        if isinstance(input_element, str) or isinstance(input_element, unicode):
-            return re.match(pattern, input_element)
-        return False
+    def triggers(self):
+        return self.rule_trigger.check(self.rule_input)
 
-    @staticmethod
-    def _is_parsed(input_element):
-        return isinstance(input_element, Model)
+    def expand(self, fillers):
+        """
+        Expand a rule's input by one or more fillers.
+        """
+        # Convert to iterable if it's just a single filler
+        if type(fillers) not in (set, list, tuple):
+            fillers = [fillers]
 
-    def triggers(self, line):
-        # TODO: Implement
-        pass
+        assert all([isinstance(filler, Filler) for filler in fillers])
 
-    def expand(self, tokens):
-        # TODO: Implement
-        pass
+        self.rule_input.extend(fillers)
+        return self.rule_target(self.rule_input)
+
+    def prepare_rule_input(self):
+        self.rule_input = [
+            getattr(input_element, "line") for input_element in self.rule_input
+        ]
 
 
 class HeaderRule(Rule):
@@ -128,18 +94,14 @@ class HeaderRule(Rule):
     def __init__(self, rule_input):
         super(HeaderRule, self).__init__(rule_input, Header)
 
-    # TODO: Refactor
     def apply(self):
         if len(self.rule_input) == 4:
-            return RuleResult(
-                rule_target=self.rule_target(
-                    parliament=self.rule_input[0],
-                    document_type=self.rule_input[1],
-                    number=self.rule_input[2],
-                    location=self.rule_input[3],
-                    date=self.rule_input[3]
-                ),
-                skip_lines=4
+            return self.rule_target(
+                parliament=self.rule_input[0],
+                document_type=self.rule_input[1],
+                number=self.rule_input[2],
+                location=self.rule_input[3],
+                date=self.rule_input[3]
             )
         else:
             self._application_failed()
@@ -152,13 +114,6 @@ class AgendaItemRule(Rule):
     def __init__(self, rule_input):
         super(AgendaItemRule, self).__init__(rule_input, AgendaItem)
 
-    # TODO: Refactor
-    def apply(self):
-        return self._look_ahead_until_next_match(
-            PROTOCOL_AGENDA_ITEM_PATTERN,
-            self.rule_input
-        )
-
 
 class AgendaCommentRule(Rule):
     """
@@ -167,18 +122,18 @@ class AgendaCommentRule(Rule):
     def __init__(self, rule_input):
         super(AgendaCommentRule, self).__init__(rule_input, AgendaComment)
 
-    # TODO: Refactor
     def apply(self):
         if not len(self.rule_input) > 2:
-            self._application_failed()
+            self._application_failed(
+                u"Rule input is too big ({} found, 1 expected".format(
+                    len(self.rule_input)
+                )
+            )
 
         if self._doesnt_match_any_agenda_pattern(self.rule_input[0]) and \
                 self._doesnt_match_any_agenda_pattern(self.rule_input[1]):
-            return RuleResult(
-                rule_target=self.rule_target(
-                    contents=self.rule_input
-                ),
-                skip_lines=1
+            return self.rule_target(
+                contents=self.rule_input
             )
         else:
             self._application_failed()
@@ -202,13 +157,6 @@ class AgendaAttachmentRule(Rule):
             AgendaAttachment
         )
 
-    # TODO: Refactor
-    def apply(self):
-        return self._look_ahead_until_next_match(
-            PROTOCOL_AGENDA_ATTACHMENT_PATTERN,
-            self.rule_input
-        )
-
 
 class AgendaRule(Rule):
     """
@@ -216,14 +164,3 @@ class AgendaRule(Rule):
     """
     def __init__(self, rule_input):
         super(AgendaRule, self).__init__(rule_input, Agenda)
-
-    # TODO: Refactor
-    def apply(self):
-        for inpt in self.rule_input:
-            if not isinstance(inpt, AgendaItem):
-                self._application_failed()
-
-        return RuleResult(
-            rule_target=self.rule_target(self.rule_input),
-            skip_lines=len(self.rule_input)
-        )

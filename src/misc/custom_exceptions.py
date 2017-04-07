@@ -33,11 +33,11 @@ class ProtocolParsingException(CustomException):
 
 
 class RuleApplicationException(CustomException):
-
-    def __init__(self, rule_name, rule_input):
+    def __init__(self, rule_name, rule_input, reason):
         super(RuleApplicationException, self).__init__(
-            u"Rule {} couldn't be applied to the following input:\n\t{}".format(
-                rule_name, rule_input
+            u"Rule {} couldn't be applied to the following input:\n\t{}\nThe "
+            u"following problem occurred:{}\n".format(
+                rule_name, rule_input, unicode(reason)
             )
         )
 
