@@ -11,9 +11,9 @@ import codecs
 from misc.helpers import get_config_from_py_file
 from misc.custom_exceptions import (
     CustomException,
-    ProtocolParsingException,
+    ProtocolParserAssignmentException,
     RuleApplicationException,
-    ParsingException
+    ParserCoherenceException
 )
 
 from parsing.rules import (
@@ -103,14 +103,14 @@ class Parser(object):
         sense.
         """
         if len(self.rule_classes) == 0:
-            raise ParsingException(
+            raise ParserCoherenceException(
                 u"{} doesn't possess any rules to utilize.".format(
                     self.__class__.__name__
                 )
             )
 
         if len(self.parser_input) == 0 or not self.parser_input:
-            raise ParsingException(
+            raise ParserCoherenceException(
                 u"{} doesn't have any input to parse.".format(
                     self.__class__.__name__
                 )
@@ -219,7 +219,7 @@ class BundesParser(Parser):
 
         for position in positions:
             if positions.count(position) > 1:
-                raise ProtocolParsingException(
+                raise ProtocolParserAssignmentException(
                     u"At least two sections are occupying position {}".format(
                         position
                     )
@@ -228,7 +228,7 @@ class BundesParser(Parser):
             # Check if negative positions are already being occupied
             if position < 0:
                 if (number_of_blocks + position) in positions:
-                    raise ProtocolParsingException(
+                    raise ProtocolParserAssignmentException(
                         u"At least two sections are occupying position {}".format(
                             position
                         )
