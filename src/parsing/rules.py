@@ -89,7 +89,7 @@ class HeaderRule(Rule):
     """
     def __init__(self, rule_input):
         # TODO (Refactor): Add rule trigger
-        super().__init__(rule_input, Header)
+        super().__init__(rule_input, Header, "")
 
     def apply(self):
         if len(self.rule_input) == 4:
@@ -110,7 +110,7 @@ class AgendaItemRule(Rule):
     """
     def __init__(self, rule_input):
         # TODO (Refactor): Add rule trigger
-        super().__init__(rule_input, AgendaItem)
+        super().__init__(rule_input, AgendaItem, "")
 
 
 class AgendaCommentRule(Rule):
@@ -119,7 +119,7 @@ class AgendaCommentRule(Rule):
     """
     def __init__(self, rule_input):
         # TODO (Refactor): Add rule trigger
-        super().__init__(rule_input, AgendaComment)
+        super().__init__(rule_input, AgendaComment, "")
 
     def apply(self):
         if not len(self.rule_input) > 2:
@@ -142,7 +142,8 @@ class AgendaAttachmentRule(Rule):
         # TODO (Refactor): Add rule trigger
         super().__init__(
             rule_input,
-            AgendaAttachment
+            AgendaAttachment,
+            ""
         )
 
 
@@ -151,4 +152,5 @@ class AgendaRule(Rule):
     Rule to group multiple agenda items to an agenda.
     """
     def __init__(self, rule_input):
-        super().__init__(rule_input, Agenda)
+        # TODO (Refactor): Add rule trigger
+        super().__init__(rule_input, Agenda, "")

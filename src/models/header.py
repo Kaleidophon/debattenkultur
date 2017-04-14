@@ -9,11 +9,13 @@ from datetime import datetime
 import locale
 
 # PROJECT
-from models.model import Model
+from models.model import ParserTarget
 from config import PROTOCOL_DATE_FORMAT
 
+# TODO (Implement): Write Rule targets for header [DU 15.04.17]
 
-class Header(Model):
+
+class Header(ParserTarget):
 
     def __init__(self, **init_args):
         super().__init__(
@@ -26,6 +28,11 @@ class Header(Model):
             },
             **init_args
         )
+
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
     @staticmethod
     def _extract_date(raw_line):
