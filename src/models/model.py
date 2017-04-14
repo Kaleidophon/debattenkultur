@@ -5,17 +5,20 @@ Model superclass.
 """
 
 # STD
-from abc import ABCMeta
+import abc
+
+# EXT
+import cerberus
 
 # PROJECT
 from misc.custom_exceptions import NotWritableException, NotReadableException
 
 
-class Model(object):
+class Model:
     """
     Model superclass.
     """
-    __metaclass__ = ABCMeta
+    __metaclass__ = abc.ABCMeta
     formatting_functions = {}
     internals = {
         "formatting_functions", "internals", "not_writable", "not_readable"
@@ -28,7 +31,7 @@ class Model(object):
         self.formatting_functions.update(formatting_functions)
         self.internals = self.internals.union(internals)
 
-        for attribute, value in init_attributes.iteritems():
+        for attribute, value in init_attributes.items():
             setattr(self, attribute, value)
 
         self.not_writable = self.not_writable.union(not_writable)
@@ -63,12 +66,6 @@ class Model(object):
             id(self)
         )
 
-    def __unicode__(self):
-        return u"<{} #{}>".format(
-            self.__class__.__name__,
-            id(self)
-        )
-
 
 class Empty(Model):
     """
@@ -78,7 +75,7 @@ class Empty(Model):
         init_args = {}
         if exception:
             init_args["exception"] = exception.message
-        super(Empty, self).__init__(**init_args)
+        super().__init__(**init_args)
 
 
 class Filler(Model):
@@ -86,6 +83,110 @@ class Filler(Model):
     Model for filler lines that didn't trigger any parsing rules.
     """
     def __init__(self, line):
-        super(Filler, self).__init__({"line": line})
+        super().__init__({"line": line})
 
+
+class Target(Model):
+    """
+    Super class for target models that processed data from parser rules or
+    parsers gets put into.
+    """
+    target_type = ""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.internals = self.internals.union(
+            {"schema", "validator", "target_type"}
+        )
+        self.validate()
+
+    def validate(self):
+        """
+        Validate the data in this target.
+        """
+        if self.schema == {}:
+            raise AssertionError(
+                "No validation schema was declared for this class."
+            )
+
+        if not self.validator.validate(self.attributes, self.schema):
+            raise cerberus.DocumentError(
+                "The following error were encountered during the validation "
+                "of this {} target: {}".format(
+                    self.target_type,
+                    "\t* ".join(
+                        [
+                            "{}:{}".format(field, " / ".join(errors))
+                            for field, errors in self.validator.errors()
+                        ]
+                    )
+                )
+            )
+
+    @abc.abstractmethod
+    @property
+    def schema(self):
+        """
+        Define a data validation schema for the current class here.
+        """
+        return {}
+
+    @property
+    def validator(self):
+        """
+        Initialize the validator to validate data for this target.
+        """
+        return cerberus.Validator()
+
+
+class RuleTarget(Target):
+    """
+    Super class for rule targets, to which all the lines a rule spans are
+    combined to.
+    """
+    target_type = "rule"
+
+    @abc.abstractmethod
+    @property
+    def schema(self):
+        return {}
+
+
+class ParserTargetValidator(cerberus.Validator):
+    """
+    Overriding the default cerberus validator to explicitly validate rule
+    target models.
+    """
+    def _validate_type_ruletarget(self, value):
+        """
+        Implement extra function to validate RuleTargets.
+        """
+        return isinstance(value, RuleTarget)
+
+    def _validate_type_parsertarget(self, value):
+        """
+        Implement extra function to validate ParserTargets (used in meta
+        parser).
+        """
+        return isinstance(value, ParserTarget)
+
+
+class ParserTarget(Target):
+    """
+    Super class for target models for parser, to which all the rule targets
+    are combined to.
+    """
+    target_type = "parser"
+
+    @abc.abstractmethod
+    @property
+    def schema(self):
+        return {}
+
+    @property
+    def validate(self):
+        """
+        Initialize a special validator for parser targets.
+        """
+        return ParserTargetValidator()
 

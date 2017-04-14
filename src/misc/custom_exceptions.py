@@ -10,7 +10,7 @@ class CustomException(Exception):
     Simple class to identify custom made exceptions.
     """
     def __init__(self, message):
-        super(CustomException, self).__init__(message)
+        super().__init__(message)
 
 
 class NotWritableException(CustomException):
@@ -19,8 +19,8 @@ class NotWritableException(CustomException):
     protected model attribute.
     """
     def __init__(self, attribute_name):
-        msg = u"Attribute {} is not writable.".format(attribute_name)
-        super(NotWritableException, self).__init__(msg)
+        msg = "Attribute {} is not writable.".format(attribute_name)
+        super().__init__(msg)
 
 
 class NotReadableException(CustomException):
@@ -29,8 +29,8 @@ class NotReadableException(CustomException):
     attribute.
     """
     def __init__(self, attribute_name):
-        msg = u"Attribute {} is not readable.".format(attribute_name)
-        super(NotReadableException, self).__init__(msg)
+        msg = "Attribute {} is not readable.".format(attribute_name)
+        super().__init__(msg)
 
 
 class ProtocolParserAssignmentException(CustomException):
@@ -39,7 +39,7 @@ class ProtocolParserAssignmentException(CustomException):
     protocol blocks wasn't possible.
     """
     def __init__(self, message):
-        super(ProtocolParserAssignmentException, self).__init__(message)
+        super().__init__(message)
 
 
 class RuleApplicationException(CustomException):
@@ -48,10 +48,10 @@ class RuleApplicationException(CustomException):
     input failed.
     """
     def __init__(self, rule_name, rule_input, reason):
-        super(RuleApplicationException, self).__init__(
-            u"Rule {} couldn't be applied to the following input:\n\t{}\nThe "
-            u"following problem occurred:{}\n".format(
-                rule_name, rule_input, unicode(reason)
+        super().__init__(
+            "Rule {} couldn't be applied to the following input:\n\t{}\nThe "
+            "following problem occurred:{}\n".format(
+                rule_name, rule_input, reason
             )
         )
 
@@ -62,4 +62,4 @@ class ParserCoherenceException(CustomException):
     arguments.
     """
     def __init__(self, message):
-        super(ParserCoherenceException, self).__init__(message)
+        super().__init__(message)

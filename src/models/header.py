@@ -16,7 +16,7 @@ from config import PROTOCOL_DATE_FORMAT
 class Header(Model):
 
     def __init__(self, **init_args):
-        super(Header, self).__init__(
+        super().__init__(
             not_writable={
                 "parliament", "document_type", "number", "location", "date"
             },

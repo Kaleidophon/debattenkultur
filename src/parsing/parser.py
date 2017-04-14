@@ -3,6 +3,17 @@
 """
 Parser to parse protocols of the German Bundestag.
 """
+# TODO (Documentation): Write explanation about how parsers work [DU 14.04.17]
+# Include:
+# * How one "meta parser" divides the protocol up into blocks
+# * Then assigns specific parsers to each block
+# * How parsers contain rules containing rule triggers
+# * How parser then actually parse
+#   * Lexing
+#   * Rule expansion
+#   * Combination to RuleTargets
+#   * Combinaton to ParserTarget
+# * Combination of ParserTargets within the "meta parser" to final object
 
 # STD
 import codecs
@@ -12,7 +23,6 @@ from misc.helpers import get_config_from_py_file
 from misc.custom_exceptions import (
     CustomException,
     ProtocolParserAssignmentException,
-    RuleApplicationException,
     ParserCoherenceException
 )
 
@@ -29,7 +39,7 @@ from models.agenda_item import Agenda, Protocol
 from models.header import Header
 
 
-class Parser(object):
+class Parser:
     lexed_parser_input = None
 
     def __init__(self, rule_classes, parser_config, parser_input, parser_target):
@@ -45,7 +55,7 @@ class Parser(object):
         try:
             self.lex()
             return self.apply_rules()
-        except Exception, ex:
+        except Exception as ex:
             if isinstance(ex, CustomException):
                 return Empty(ex)
             else:
@@ -106,14 +116,14 @@ class Parser(object):
         """
         if len(self.rule_classes) == 0:
             raise ParserCoherenceException(
-                u"{} doesn't possess any rules to utilize.".format(
+                "{} doesn't possess any rules to utilize.".format(
                     self.__class__.__name__
                 )
             )
 
         if len(self.parser_input) == 0 or not self.parser_input:
             raise ParserCoherenceException(
-                u"{} doesn't have any input to parse.".format(
+                "{} doesn't have any input to parse.".format(
                     self.__class__.__name__
                 )
             )
@@ -129,7 +139,7 @@ class BundesParser(Parser):
         # Init parser args from config
         self.block_divider = config.get("PROTOCOL_BLOCK_DIVIDER", ("\r\n", ))
 
-        super(BundesParser, self).__init__(
+        super().__init__(
             rule_classes, parser_config, input_path, parser_target=Protocol
         )
 
@@ -138,21 +148,21 @@ class BundesParser(Parser):
         Process the protocol.
         """
         input_path = self.parser_input
-        print u"Loading file from {}...".format(input_path)
+        print("Loading file from {}...".format(input_path))
         lines = [line for line in codecs.open(input_path, "r", "utf-8")]
 
-        print u"Partitioning protocol into blocks, assigning parsers..."
+        print("Partitioning protocol into blocks, assigning parsers...")
         blocks = self._blockify(lines)
         parsers, blocks = self._assign_parsers(blocks)
-        print u"Created {} blocks: {}.".format(
+        print("Created {} blocks: {}.".format(
             len(blocks), ", ".join(self.config["PROTOCOL_SECTIONS"].keys())
-        )
+        ))
 
         # Parse sections
         results = [parser.process() for parser in parsers]
-        print results
+        print(results)
         for result in results:
-            print result.attributes
+            print(result.attributes)
         return results
 
     def _blockify(self, lines):
@@ -225,7 +235,7 @@ class BundesParser(Parser):
         for position in positions:
             if positions.count(position) > 1:
                 raise ProtocolParserAssignmentException(
-                    u"At least two sections are occupying position {}".format(
+                    "At least two sections are occupying position {}".format(
                         position
                     )
                 )
@@ -234,7 +244,7 @@ class BundesParser(Parser):
             if position < 0:
                 if (number_of_blocks + position) in positions:
                     raise ProtocolParserAssignmentException(
-                        u"At least two sections are occupying position {}".format(
+                        "At least two sections are occupying position {}".format(
                             position
                         )
                     )
@@ -246,15 +256,15 @@ class HeaderParser(Parser):
     """
     # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
-        super(HeaderParser, self).__init__(
+        super().__init__(
             [HeaderRule], parser_config, parser_input
         )
 
 
-class AgendaItemsParser(Parser):
+class AgendaParser(Parser):
     # TODO (Refactor): Add missing documentation
     def __init__(self, parser_config, parser_input):
-        super(AgendaItemsParser, self).__init__(
+        super().__init__(
             [
                 AgendaItemRule
                 #AgendaRule,
@@ -270,7 +280,7 @@ class AgendaItemsParser(Parser):
 class SessionHeaderParser(Parser):
     # TODO (Refactor): Add missing documentation
     def __init__(self, parser_config, parser_input):
-        super(SessionHeaderParser, self).__init__(
+        super().__init__(
             [],  # TODO: Add actual rules
             parser_config,
             parser_input,
@@ -278,12 +288,12 @@ class SessionHeaderParser(Parser):
         )
 
 
-class DiscussionsParser(Parser):
+class SessionParser(Parser):
     # TODO (Refactor): Add missing documentation
     # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
-        super(DiscussionsParser, self).__init__(
-            [], # TODO: Add actual rules
+        super().__init__(
+            [],  # TODO: Add actual rules
             parser_config,
             parser_input
         )
@@ -293,7 +303,7 @@ class AttachmentsParser(Parser):
     # TODO (Refactor): Add missing documentation
     # TODO (Refactor): Add parser target
     def __init__(self, parser_config, parser_input):
-        super(AttachmentsParser, self).__init__(
+        super().__init__(
             [],  # TODO: Add actual rules
             parser_config,
             parser_input

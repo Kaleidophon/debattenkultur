@@ -17,7 +17,7 @@ class Transcript(Model):
         not_writable = {
             "title", "date", "location", "identifier", "president", "meps"
         }
-        super(Transcript, self).__init__(
+        super().__init__(
             formatting_functions=formatting_functions,
             non_writable=not_writable,
             **init_attributes

@@ -8,10 +8,6 @@ Parsing rules used to parse the documents.
 import re
 
 # PROJECT
-from config import (
-    PROTOCOL_AGENDA_ITEM_PATTERN,
-    PROTOCOL_AGENDA_ATTACHMENT_PATTERN
-)
 from models.header import Header
 from models.model import Filler
 from models.agenda_item import (
@@ -23,7 +19,7 @@ from models.agenda_item import (
 from misc.custom_exceptions import RuleApplicationException
 
 
-class RuleTrigger(object):
+class RuleTrigger:
     trigger_regex = None
 
     def __init__(self, trigger_regex):
@@ -33,7 +29,7 @@ class RuleTrigger(object):
         return re.match(self.trigger_regex, line) is not None
 
 
-class Rule(object):
+class Rule:
     """
     Superclass for parsing rules.
     """
@@ -41,10 +37,10 @@ class Rule(object):
     rule_target = None
     rule_trigger = None
 
-    def __init__(self, rule_input, rule_target, rule_trigger):
+    def __init__(self, rule_input, rule_target, trigger_regex):
         self.rule_input = rule_input
         self.rule_target = rule_target
-        self.rule_trigger = rule_trigger
+        self.rule_trigger = RuleTrigger(trigger_regex)
 
     def apply(self):
         """
@@ -93,7 +89,7 @@ class HeaderRule(Rule):
     """
     def __init__(self, rule_input):
         # TODO (Refactor): Add rule trigger
-        super(HeaderRule, self).__init__(rule_input, Header)
+        super().__init__(rule_input, Header)
 
     def apply(self):
         if len(self.rule_input) == 4:
@@ -114,7 +110,7 @@ class AgendaItemRule(Rule):
     """
     def __init__(self, rule_input):
         # TODO (Refactor): Add rule trigger
-        super(AgendaItemRule, self).__init__(rule_input, AgendaItem)
+        super().__init__(rule_input, AgendaItem)
 
 
 class AgendaCommentRule(Rule):
@@ -123,30 +119,18 @@ class AgendaCommentRule(Rule):
     """
     def __init__(self, rule_input):
         # TODO (Refactor): Add rule trigger
-        super(AgendaCommentRule, self).__init__(rule_input, AgendaComment)
+        super().__init__(rule_input, AgendaComment)
 
     def apply(self):
         if not len(self.rule_input) > 2:
             self._application_failed(
-                u"Rule input is too big ({} found, 1 expected".format(
+                "Rule input is too big ({} found, 1 expected".format(
                     len(self.rule_input)
                 )
             )
 
-        if self._doesnt_match_any_agenda_pattern(self.rule_input[0]) and \
-                self._doesnt_match_any_agenda_pattern(self.rule_input[1]):
-            return self.rule_target(
-                contents=self.rule_input
-            )
-        else:
-            self._application_failed()
-
-    # TODO: Refactor
-    def _doesnt_match_any_agenda_pattern(self, input_element):
-        return not self._element_matches_pattern(
-            PROTOCOL_AGENDA_ITEM_PATTERN, input_element
-        ) and not self._element_matches_pattern(
-            PROTOCOL_AGENDA_ATTACHMENT_PATTERN, input_element
+        return self.rule_target(
+            contents=self.rule_input
         )
 
 
@@ -156,7 +140,7 @@ class AgendaAttachmentRule(Rule):
     """
     def __init__(self, rule_input):
         # TODO (Refactor): Add rule trigger
-        super(AgendaAttachmentRule, self).__init__(
+        super().__init__(
             rule_input,
             AgendaAttachment
         )
@@ -167,4 +151,4 @@ class AgendaRule(Rule):
     Rule to group multiple agenda items to an agenda.
     """
     def __init__(self, rule_input):
-        super(AgendaRule, self).__init__(rule_input, Agenda)
+        super().__init__(rule_input, Agenda)

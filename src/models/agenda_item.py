@@ -24,7 +24,7 @@ class Protocol(Model):
     items = []
 
     def __init__(self, items):
-        super(Model, self).__init__(items=items)
+        super().__init__(items=items)
 
 
 class Agenda(Model):
@@ -35,7 +35,7 @@ class Agenda(Model):
     items = []
 
     def __init__(self, items):
-        super(Agenda, self).__init__(items=items)
+        super().__init__(items=items)
 
 
 class AgendaItem(Model):
@@ -49,7 +49,7 @@ class AgendaItem(Model):
     subitems = []
 
     def __init__(self, header, contents):
-        super(AgendaItem, self).__init__(
+        super().__init__(
             item_type=header,
             item_number=header,
             subitems=contents,
@@ -112,7 +112,7 @@ class AgendaComment(Model):
     identifier = None
 
     def __init__(self, contents):
-        super(AgendaComment, self).__init__(
+        super().__init__(
             identifier=contents[0],
             comment=contents[1]
         )
@@ -135,7 +135,7 @@ class AgendaContent(Model):
     content = None
 
     def __init__(self, originator, content):
-        super(AgendaContent, self).__init__(
+        super().__init__(
             originator=originator, content=content
         )
 
@@ -146,7 +146,7 @@ class Speech(AgendaContent):
     """
     # TODO (Refactor): Add validation
     def __init__(self, originator, content):
-        super(Speech, self).__init__(originator, content)
+        super().__init__(originator, content)
 
 
 class Action(AgendaContent):
@@ -156,7 +156,7 @@ class Action(AgendaContent):
     # TODO (Refactor): Add validation
     def __init__(self, originator, content, action_type):
         self.type = action_type
-        super(Action, self).__init__(originator, content)
+        super().__init__(originator, content)
 
 
 class Introduction(AgendaContent):
@@ -165,4 +165,4 @@ class Introduction(AgendaContent):
     """
     # TODO (Refactor): Add validation
     def __init__(self, originator, content):
-        super(Introduction, self).__init__(originator, content)
+        super().__init__(originator, content)
