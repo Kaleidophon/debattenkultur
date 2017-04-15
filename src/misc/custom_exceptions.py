@@ -10,7 +10,8 @@ class CustomException(Exception):
     Simple class to identify custom made exceptions.
     """
     def __init__(self, message):
-        super().__init__(message)
+        self.message = message
+        super().__init__(self.message)
 
 
 class NotWritableException(CustomException):
@@ -19,8 +20,8 @@ class NotWritableException(CustomException):
     protected model attribute.
     """
     def __init__(self, attribute_name):
-        msg = "Attribute {} is not writable.".format(attribute_name)
-        super().__init__(msg)
+        self.message = "Attribute {} is not writable.".format(attribute_name)
+        super().__init__(self.message)
 
 
 class NotReadableException(CustomException):
@@ -29,8 +30,8 @@ class NotReadableException(CustomException):
     attribute.
     """
     def __init__(self, attribute_name):
-        msg = "Attribute {} is not readable.".format(attribute_name)
-        super().__init__(msg)
+        self.message = "Attribute {} is not readable.".format(attribute_name)
+        super().__init__(self.message)
 
 
 class ProtocolParserAssignmentException(CustomException):
@@ -39,6 +40,7 @@ class ProtocolParserAssignmentException(CustomException):
     protocol blocks wasn't possible.
     """
     def __init__(self, message):
+        self.message = message
         super().__init__(message)
 
 
@@ -48,12 +50,13 @@ class RuleApplicationException(CustomException):
     input failed.
     """
     def __init__(self, rule_name, rule_input, reason):
-        super().__init__(
+        self.message = (
             "Rule {} couldn't be applied to the following input:\n\t{}\nThe "
             "following problem occurred:{}\n".format(
                 rule_name, rule_input, reason
             )
         )
+        super().__init__(self.message)
 
 
 class ParserCoherenceException(CustomException):
@@ -62,4 +65,5 @@ class ParserCoherenceException(CustomException):
     arguments.
     """
     def __init__(self, message):
+        self.message = message
         super().__init__(message)

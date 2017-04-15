@@ -21,7 +21,8 @@ class Model:
     __metaclass__ = abc.ABCMeta
     formatting_functions = {}
     internals = {
-        "formatting_functions", "internals", "not_writable", "not_readable"
+        "formatting_functions", "internals", "not_writable", "not_readable",
+        "schema", "validator", "target_type"
     }
     not_writable = set()
     not_readable = set()
@@ -30,6 +31,8 @@ class Model:
                  not_writable=set(), not_readable=set(), **init_attributes):
         self.formatting_functions.update(formatting_functions)
         self.internals = self.internals.union(internals)
+
+        self.validate(init_attributes)
 
         for attribute, value in init_attributes.items():
             setattr(self, attribute, value)
@@ -40,11 +43,48 @@ class Model:
     @property
     def attributes(self):
         return {
-            key: value for key, value in self.__dict__.iteritems()
+            key: value for key, value in self.__dict__.items()
             if key not in self.internals
             and key not in self.not_readable
             and not key.startswith("_")
         }
+
+    def validate(self, init_attributes):
+        """
+        Validate the data in this target.
+        """
+        if self.schema == {}:
+            raise AssertionError(
+                "No validation schema was declared for this class."
+            )
+
+        if not self.validator.validate(init_attributes, self.schema):
+            raise cerberus.DocumentError(
+                "The following error were encountered during the validation "
+                "of this {} target: {}".format(
+                    self.target_type,
+                    "\t* ".join(
+                        [
+                            "{}:{}".format(field, " / ".join(errors))
+                            for field, errors in self.validator.errors.items()
+                        ]
+                    )
+                )
+            )
+
+    @abc.abstractproperty
+    def schema(self):
+        """
+        Define a data validation schema for the current class here.
+        """
+        return {}
+
+    @property
+    def validator(self):
+        """
+        Initialize the validator to validate data for this target.
+        """
+        return cerberus.Validator()
 
     def __setattr__(self, key, value):
         if key in self.not_writable:
@@ -53,12 +93,12 @@ class Model:
         if key in self.formatting_functions:
             value = self.formatting_functions[key](value)
 
-        super(Model, self).__setattr__(key, value)
+        super().__setattr__(key, value)
 
     def __getattr__(self, item):
         if item in self.not_readable:
             raise NotReadableException(item)
-        return super(Model, self).__getattribute__(item)
+        return super().__getattribute__(item)
 
     def __str__(self):
         return "<{} #{}>".format(
@@ -77,13 +117,34 @@ class Empty(Model):
             init_args["exception"] = exception.message
         super().__init__(**init_args)
 
+    def __str__(self):
+        if "exception" in self.attributes:
+            return "<{} #{}:\n\t{}\n>".format(
+                self.__class__.__name__,
+                id(self),
+                getattr(self, "exception")
+            )
+
+        return "<{} #{}>".format(
+            self.__class__.__name__,
+            id(self)
+        )
+
+    @property
+    def schema(self):
+        return {"line": {"type": "string"}}
+
 
 class Filler(Model):
     """
     Model for filler lines that didn't trigger any parsing rules.
     """
     def __init__(self, line):
-        super().__init__({"line": line})
+        super().__init__(**{"line": line})
+
+    @property
+    def schema(self):
+        return {"line": {"type": "string"}}
 
 
 class Target(Model):
@@ -93,50 +154,9 @@ class Target(Model):
     """
     target_type = ""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.internals = self.internals.union(
-            {"schema", "validator", "target_type"}
-        )
-        self.validate()
-
-    def validate(self):
-        """
-        Validate the data in this target.
-        """
-        if self.schema == {}:
-            raise AssertionError(
-                "No validation schema was declared for this class."
-            )
-
-        if not self.validator.validate(self.attributes, self.schema):
-            raise cerberus.DocumentError(
-                "The following error were encountered during the validation "
-                "of this {} target: {}".format(
-                    self.target_type,
-                    "\t* ".join(
-                        [
-                            "{}:{}".format(field, " / ".join(errors))
-                            for field, errors in self.validator.errors()
-                        ]
-                    )
-                )
-            )
-
-    @abc.abstractmethod
-    @property
+    @abc.abstractproperty
     def schema(self):
-        """
-        Define a data validation schema for the current class here.
-        """
         return {}
-
-    @property
-    def validator(self):
-        """
-        Initialize the validator to validate data for this target.
-        """
-        return cerberus.Validator()
 
 
 class RuleTarget(Target):
@@ -146,8 +166,7 @@ class RuleTarget(Target):
     """
     target_type = "rule"
 
-    @abc.abstractmethod
-    @property
+    @abc.abstractproperty
     def schema(self):
         return {}
 
@@ -161,6 +180,7 @@ class ParserTargetValidator(cerberus.Validator):
         """
         Implement extra function to validate RuleTargets.
         """
+        # TODO (Bug): This let's the validation fail. Why? [DU 15.04.17]
         return isinstance(value, RuleTarget)
 
     def _validate_type_parsertarget(self, value):
@@ -178,13 +198,12 @@ class ParserTarget(Target):
     """
     target_type = "parser"
 
-    @abc.abstractmethod
-    @property
+    @abc.abstractproperty
     def schema(self):
         return {}
 
     @property
-    def validate(self):
+    def validator(self):
         """
         Initialize a special validator for parser targets.
         """

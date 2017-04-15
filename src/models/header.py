@@ -9,15 +9,29 @@ from datetime import datetime
 import locale
 
 # PROJECT
-from models.model import ParserTarget
+from models.model import ParserTarget, RuleTarget
 from config import PROTOCOL_DATE_FORMAT
-
-# TODO (Implement): Write Rule targets for header [DU 15.04.17]
 
 
 class Header(ParserTarget):
 
-    def __init__(self, **init_args):
+    def __init__(self, header_information):
+        super().__init__(
+            header_information=header_information[0]
+        )
+
+    @property
+    def schema(self):
+        return {
+            "header_information": {
+                "required": True,
+                "type": "ruletarget"
+            }
+        }
+
+
+class HeaderInformation(RuleTarget):
+    def __init__(self, parliament, document_type, number, location, date):
         super().__init__(
             not_writable={
                 "parliament", "document_type", "number", "location", "date"
@@ -26,13 +40,38 @@ class Header(ParserTarget):
                 "location": self._extract_location,
                 "date": self._extract_date
             },
-            **init_args
+            parliament=parliament,
+            document_type=document_type,
+            number=number,
+            location=location,
+            date=date
         )
 
     @property
     def schema(self):
-        # TODO (Implement) [DU 15.04.17]
-        return {}
+        # TODO (Improve): Refactor with "allowed" property [DU 15.04.17]
+        return {
+            "parliament": {
+                "required": True,
+                "type": "string"
+            },
+            "document_type": {
+                "required": True,
+                "type": "string"
+            },
+            "number": {
+                "required": True,
+                "type": "string"
+            },
+            "location": {
+                "required": True,
+                "type": "string"
+            },
+            "date": {
+                "required": True,
+                "type": "string"
+            }
+        }
 
     @staticmethod
     def _extract_date(raw_line):
@@ -44,3 +83,4 @@ class Header(ParserTarget):
     @staticmethod
     def _extract_location(raw_line):
         return raw_line.split(",")[0]
+

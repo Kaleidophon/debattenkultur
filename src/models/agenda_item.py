@@ -20,7 +20,6 @@ class Protocol(ParserTarget):
     """
     Global model to contain all other models.
     """
-    # TODO (Refactor): Add validation
     items = []
 
     def __init__(self, items):
@@ -36,7 +35,6 @@ class Agenda(ParserTarget):
     """
     Model to group multiple agenda items into an agenda.
     """
-    # TODO (Refactor): Add validation
     items = []
 
     def __init__(self, items):
