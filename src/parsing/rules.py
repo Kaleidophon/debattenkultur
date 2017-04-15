@@ -5,17 +5,13 @@ Parsing rules used to parse the documents.
 """
 
 # STD
-from abc import abstractmethod
+import abc
 import re
-from collections import namedtuple
 
 # PROJECT
-from config import (
-    PROTOCOL_AGENDA_ITEM_PATTERN,
-    PROTOCOL_AGENDA_ATTACHMENT_PATTERN
-)
-from models.model import Model
-from models.header import Header
+from config import HEADER_RULE_TRIGGER
+from models.header import HeaderInformation
+from models.model import Filler
 from models.agenda_item import (
     AgendaItem,
     Agenda,
@@ -24,77 +20,85 @@ from models.agenda_item import (
 )
 from misc.custom_exceptions import RuleApplicationException
 
-# Create type of named tuple to increase readability
-RuleResult = namedtuple("RuleResult", "rule_target skip_lines")
+
+class RuleTrigger:
+    """
+    Rule triggers will "anchor" a rule at a certain line in case the
+    trigger's regex matches the current line. Afterwards, the rule will
+    expand over all filler lines.
+    """
+    trigger_regex = None
+
+    def __init__(self, trigger_regex):
+        self.trigger_regex = trigger_regex
+
+    def check(self, line):
+        return re.search(self.trigger_regex, line) is not None
 
 
-class Rule(object):
+class Rule:
     """
     Superclass for parsing rules.
     """
-    def __init__(self, rule_input, rule_target):
-        self.rule_input = rule_input
-        self.rule_target = rule_target
+    rule_input = None
+    rule_target_class = None
+    rule_trigger = None
 
-    @abstractmethod
+    def __init__(self, rule_input, rule_target_class, trigger_regex):
+        self.rule_input = rule_input
+        self.rule_target_class = rule_target_class
+        self.rule_trigger = RuleTrigger(trigger_regex)
+
     def apply(self):
         """
         Apply this rule to the rules input. Rule inputs can be
-        document lines / words or models.
-
-        Rules return either a result or an exception of the application of
-        the rule to the given input failed. The result is a namedtuple
-        consisting in both the parsed data wrapped within a specific model (
-        rule_target) and the number of lines the parser has to skip now (in
-        case the rule worked with lookaheads).
+        document lines.
         """
-        self._application_failed()
+        try:
+            self.prepare_rule_input()
+            return self.rule_target
+        except Exception as e:
+            self._application_failed(e)
 
-    def _look_ahead_until_next_match(self, pattern, rule_input):
+    @abc.abstractproperty
+    def rule_target(self):
         """
-        Make lookaheads until you encounter the next elements that matches
-        the pattern. Otherwise return None.:
+        Return the rule target with custom key word arguments.
         """
-        current_element = []
+        return self.rule_target_class(input=self.rule_input)
 
-        for i, iline in enumerate(rule_input):
-            if self._element_matches_pattern(pattern, iline) or \
-                    self._is_parsed(iline):
-                current_element.append(iline)
-                for j in range(i + 1, len(rule_input)):
-                    jline = rule_input[j]
-                    if self._element_matches_pattern(pattern, jline) or \
-                            self._is_parsed(jline):
-                        return RuleResult(
-                            rule_target=self.rule_target(
-                                header=current_element[0],
-                                contents=current_element
-                            ),
-                            skip_lines=len(current_element)
-                        )
-                    current_element.append(jline)
-            else:
-                break
-
-        self._application_failed()
-
-    def _application_failed(self):
+    def _application_failed(self, reason):
         """
         Raise error if the application of the rule failed.
         """
         raise RuleApplicationException(
-            self.__class__.__name__, self.rule_input
+            self.__class__.__name__, self.rule_input, reason
         )
 
-    @staticmethod
-    def _element_matches_pattern(pattern, input_element):
-        if isinstance(input_element, str) or isinstance(input_element, unicode):
-            return re.match(pattern, input_element)
-        return False
+    def triggers(self):
+        return self.rule_trigger.check(self.rule_input)
 
-    @staticmethod
-    def _is_parsed(input_element):
-        return isinstance(input_element, Model)
+    def expand(self, fillers):
+        """
+        Expand a rule's input by one or more fillers.
+        """
+        # Convert to iterable if it's just a single filler
+        if type(fillers) not in (set, list, tuple):
+            fillers = [fillers]
+
+        assert all([isinstance(filler, Filler) for filler in fillers])
+
+        if type(self.rule_input) != list:
+            self.rule_input = [self.rule_input]
+
+        self.rule_input.extend(fillers)
+
+    def prepare_rule_input(self):
+        self.rule_input = [
+            getattr(input_element, "line")
+            if isinstance(input_element, Filler) else input_element
+            for input_element in self.rule_input
+        ]
 
 
 class HeaderRule(Rule):
@@ -102,22 +106,17 @@ class HeaderRule(Rule):
     Single easy rule to parse the protocol header in one go.
     """
     def __init__(self, rule_input):
-        super(HeaderRule, self).__init__(rule_input, Header)
+        super().__init__(rule_input, HeaderInformation, HEADER_RULE_TRIGGER)
 
-    def apply(self):
-        if len(self.rule_input) == 4:
-            return RuleResult(
-                rule_target=self.rule_target(
-                    parliament=self.rule_input[0],
-                    document_type=self.rule_input[1],
-                    number=self.rule_input[2],
-                    location=self.rule_input[3],
-                    date=self.rule_input[3]
-                ),
-                skip_lines=4
-            )
-        else:
-            self._application_failed()
+    @property
+    def rule_target(self):
+        return self.rule_target_class(
+            parliament=self.rule_input[0],
+            document_type=self.rule_input[1],
+            number=self.rule_input[2],
+            location=self.rule_input[3],
+            date=self.rule_input[3]
+        )
 
 
 class AgendaItemRule(Rule):
@@ -125,13 +124,13 @@ class AgendaItemRule(Rule):
     Rule to parse AgendaItems.
     """
     def __init__(self, rule_input):
-        super(AgendaItemRule, self).__init__(rule_input, AgendaItem)
+        # TODO (Refactor): Add rule trigger
+        super().__init__(rule_input, AgendaItem, "")
 
-    def apply(self):
-        return self._look_ahead_until_next_match(
-            PROTOCOL_AGENDA_ITEM_PATTERN,
-            self.rule_input
-        )
+    @property
+    def rule_target(self):
+        # TODO (Implement): [DU 15.04.17]
+        return {}
 
 
 class AgendaCommentRule(Rule):
@@ -139,28 +138,13 @@ class AgendaCommentRule(Rule):
     Rule to parse a comment to the agenda.
     """
     def __init__(self, rule_input):
-        super(AgendaCommentRule, self).__init__(rule_input, AgendaComment)
+        # TODO (Refactor): Add rule trigger
+        super().__init__(rule_input, AgendaComment, "")
 
-    def apply(self):
-        if not len(self.rule_input) > 2:
-            self._application_failed()
-
-        if self._doesnt_match_any_agenda_pattern(self.rule_input[0]) and \
-                self._doesnt_match_any_agenda_pattern(self.rule_input[1]):
-            return RuleResult(
-                rule_target=self.rule_target(
-                    contents=self.rule_input
-                ),
-                skip_lines=1
-            )
-        else:
-            self._application_failed()
-
-    def _doesnt_match_any_agenda_pattern(self, input_element):
-        return not self._element_matches_pattern(
-            PROTOCOL_AGENDA_ITEM_PATTERN, input_element
-        ) and not self._element_matches_pattern(
-            PROTOCOL_AGENDA_ATTACHMENT_PATTERN, input_element
+    @property
+    def rule_target(self):
+        return self.rule_target_class(
+            contents=self.rule_input
         )
 
 
@@ -169,16 +153,17 @@ class AgendaAttachmentRule(Rule):
     Rule to parse Attachments to the Agenda.
     """
     def __init__(self, rule_input):
-        super(AgendaAttachmentRule, self).__init__(
+        # TODO (Refactor): Add rule trigger
+        super().__init__(
             rule_input,
-            AgendaAttachment
+            AgendaAttachment,
+            ""
         )
 
-    def apply(self):
-        return self._look_ahead_until_next_match(
-            PROTOCOL_AGENDA_ATTACHMENT_PATTERN,
-            self.rule_input
-        )
+    @property
+    def rule_target(self):
+        # TODO (Implement): [DU 15.04.17]
+        return {}
 
 
 class AgendaRule(Rule):
@@ -186,14 +171,10 @@ class AgendaRule(Rule):
     Rule to group multiple agenda items to an agenda.
     """
     def __init__(self, rule_input):
-        super(AgendaRule, self).__init__(rule_input, Agenda)
+        # TODO (Refactor): Add rule trigger
+        super().__init__(rule_input, Agenda, "")
 
-    def apply(self):
-        for inpt in self.rule_input:
-            if not isinstance(inpt, AgendaItem):
-                self._application_failed()
-
-        return RuleResult(
-            rule_target=self.rule_target(self.rule_input),
-            skip_lines=len(self.rule_input)
-        )
+    @property
+    def rule_target(self):
+        # TODO (Implement): [DU 15.04.17]
+        return {}

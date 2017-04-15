@@ -13,20 +13,40 @@ from config import (
     PROTOCOL_AGENDA_SUBITEM_PATTERN,
     PROTOCOL_AGENDA_SUBITEM_ITEMTYPE
 )
-from models.model import Model
+from models.model import ParserTarget, RuleTarget
 
 
-class Agenda(Model):
+class Protocol(ParserTarget):
+    """
+    Global model to contain all other models.
+    """
+    items = []
+
+    def __init__(self, items):
+        super().__init__(items=items)
+
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
+
+
+class Agenda(ParserTarget):
     """
     Model to group multiple agenda items into an agenda.
     """
     items = []
 
     def __init__(self, items):
-        super(Agenda, self).__init__(items=items)
+        super().__init__(items=items)
+
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
 
-class AgendaItem(Model):
+class AgendaItem(RuleTarget):
     """
     Model for an agenda item on the agenda of the German Bundestag's proceeding.
     """
@@ -36,7 +56,7 @@ class AgendaItem(Model):
     subitems = []
 
     def __init__(self, header, contents):
-        super(AgendaItem, self).__init__(
+        super().__init__(
             item_type=header,
             item_number=header,
             subitems=contents,
@@ -47,46 +67,13 @@ class AgendaItem(Model):
             }
         )
 
-    @staticmethod
-    def _get_agenda_item_type(header):
-        if re.match(PROTOCOL_AGENDA_ITEM_PATTERN, header):
-            return header.replace(":", "").split(" ")[0]
-        elif re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, header):
-            return PROTOCOL_AGENDA_SUBITEM_ITEMTYPE
-
-    @staticmethod
-    def _get_agenda_item_number(header):
-        if re.match(PROTOCOL_AGENDA_ITEM_PATTERN, header):
-            return int(header.replace(":", "").split(" ")[1])
-        elif re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, header):
-            return header.split("\t")[0].replace(")", "").upper()
-
-    @staticmethod
-    def _split_agenda_subitems(contents):
-        contents.pop(0)  # Remove header
-        subitems = []
-        current_subitem = []
-
-        for line in contents:
-            if re.match(PROTOCOL_AGENDA_SUBITEM_PATTERN, line):
-                if current_subitem:
-                    subitems.append(
-                        AgendaItem(
-                            header=current_subitem[0],
-                            contents=current_subitem
-                        )
-                    )
-                current_subitem = [line]
-            else:
-                current_subitem.append(line)
-
-        if len(subitems) == 0:
-            subitems = contents
-
-        return subitems
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
 
-class AgendaComment(Model):
+class AgendaComment(RuleTarget):
     """
     Model for comments about the protocol's agenda.
     """
@@ -94,20 +81,30 @@ class AgendaComment(Model):
     identifier = None
 
     def __init__(self, contents):
-        super(AgendaComment, self).__init__(
+        super().__init__(
             identifier=contents[0],
             comment=contents[1]
         )
 
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
-class AgendaAttachment(Model):
+
+class AgendaAttachment(RuleTarget):
     """
     Model for attachments to the protocol's agenda.
     """
     pass
 
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
-class AgendaContent(Model):
+
+class AgendaContent(RuleTarget):
     """
     Superclass for the different kind of things bundled up in an agenda item.
     """
@@ -115,9 +112,14 @@ class AgendaContent(Model):
     content = None
 
     def __init__(self, originator, content):
-        super(AgendaContent, self).__init__(
+        super().__init__(
             originator=originator, content=content
         )
+
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
 
 class Speech(AgendaContent):
@@ -125,7 +127,12 @@ class Speech(AgendaContent):
     Model for a speech in parliament.
     """
     def __init__(self, originator, content):
-        super(Speech, self).__init__(originator, content)
+        super().__init__(originator, content)
+
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
 
 class Action(AgendaContent):
@@ -134,7 +141,12 @@ class Action(AgendaContent):
     """
     def __init__(self, originator, content, action_type):
         self.type = action_type
-        super(Action, self).__init__(originator, content)
+        super().__init__(originator, content)
+
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
 
 class Introduction(AgendaContent):
@@ -142,4 +154,9 @@ class Introduction(AgendaContent):
     Model for an introduction at the beginning of an agenda item.
     """
     def __init__(self, originator, content):
-        super(Introduction, self).__init__(originator, content)
+        super().__init__(originator, content)
+
+    @property
+    def schema(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}

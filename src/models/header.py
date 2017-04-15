@@ -9,14 +9,30 @@ from datetime import datetime
 import locale
 
 # PROJECT
-from models.model import Model
+from models.model import ParserTarget, RuleTarget
 from config import PROTOCOL_DATE_FORMAT
 
 
-class Header(Model):
+class Header(ParserTarget):
 
-    def __init__(self, **init_args):
-        super(Header, self).__init__(
+    def __init__(self, header_information):
+        super().__init__(
+            header_information=header_information[0]
+        )
+
+    @property
+    def schema(self):
+        return {
+            "header_information": {
+                "required": True,
+                "type": "ruletarget"
+            }
+        }
+
+
+class HeaderInformation(RuleTarget):
+    def __init__(self, parliament, document_type, number, location, date):
+        super().__init__(
             not_writable={
                 "parliament", "document_type", "number", "location", "date"
             },
@@ -24,8 +40,38 @@ class Header(Model):
                 "location": self._extract_location,
                 "date": self._extract_date
             },
-            **init_args
+            parliament=parliament,
+            document_type=document_type,
+            number=number,
+            location=location,
+            date=date
         )
+
+    @property
+    def schema(self):
+        # TODO (Improve): Refactor with "allowed" property [DU 15.04.17]
+        return {
+            "parliament": {
+                "required": True,
+                "type": "string"
+            },
+            "document_type": {
+                "required": True,
+                "type": "string"
+            },
+            "number": {
+                "required": True,
+                "type": "string"
+            },
+            "location": {
+                "required": True,
+                "type": "string"
+            },
+            "date": {
+                "required": True,
+                "type": "string"
+            }
+        }
 
     @staticmethod
     def _extract_date(raw_line):
@@ -37,3 +83,4 @@ class Header(Model):
     @staticmethod
     def _extract_location(raw_line):
         return raw_line.split(",")[0]
+

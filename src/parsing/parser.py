@@ -3,46 +3,87 @@
 """
 Parser to parse protocols of the German Bundestag.
 """
+# TODO (Documentation): Write explanation about how parsers work [DU 14.04.17]
+# Include:
+# * How one "meta parser" divides the protocol up into blocks
+# * Then assigns specific parsers to each block
+# * How parsers contain rules containing rule triggers
+# * How parser then actually parse
+#   * Lexing
+#   * Rule expansion
+#   * Combination to RuleTargets
+#   * Combinaton to ParserTarget
+# * Combination of ParserTargets within the "meta parser" to final object
 
 # STD
+import abc
 import codecs
 
 # PROJECT
 from misc.helpers import get_config_from_py_file
 from misc.custom_exceptions import (
     CustomException,
-    ProtocolParsingException,
-    RuleApplicationException,
-    ParsingException
+    ProtocolParserAssignmentException,
+    ParserCoherenceException
 )
 
 from parsing.rules import (
+    Rule,
     HeaderRule,
     AgendaRule,
     AgendaItemRule,
     AgendaAttachmentRule,
     AgendaCommentRule
 )
-from models.model import Empty
+from models.model import Empty, Filler
+from models.agenda_item import Agenda, Protocol
+from models.header import Header
 
 
-class Parser(object):
-    def __init__(self, rules, parser_config, parser_input):
-        self.rules = rules
+class Parser:
+    lexed_parser_input = None
+    modeled_parser_output = None
+
+    def __init__(self, rule_classes, parser_config, parser_input,
+                 parser_target_class):
+        self.rule_classes = rule_classes
         self.config = parser_config
         self.parser_input = parser_input
+        self.parser_target_class = parser_target_class
 
     def process(self):
         """
         Main processing.
         """
         try:
-            return self.apply_rules()
-        except Exception, ex:
+            self.lex()
+            self.apply_rules()
+            return self.parser_target
+        except Exception as ex:
             if isinstance(ex, CustomException):
                 return Empty(ex)
             else:
                 raise
+
+    def lex(self):
+        """
+        Divide up lines into either
+
+        a) Parsing rules that trigger for a certain line (a specific regex
+           matches and indicates the beginning of a certain new block)
+        b) A filler line that will be attributed to the most recent triggered
+           rule in the next step
+        """
+        self.lexed_parser_input = []
+
+        for line in self.parser_input:
+            for rule_class in self.rule_classes:
+                rule = rule_class(line)
+                if rule.triggers():
+                    self.lexed_parser_input.append(rule)
+                    break
+            else:
+                self.lexed_parser_input.append(Filler(line))
 
     def apply_rules(self):
         """
@@ -50,83 +91,48 @@ class Parser(object):
         """
         self._check_parser_coherence()
 
-        results = []
-        rule_input = self.parser_input
-        was_applied_global = False
-        was_applied_local = False
+        # 1. Add filler lines to most recent rules
+        reduced_parser_input = []
+        current_rule = None
+        for lexed_input in self.lexed_parser_input:
+            # Lexed input is rule
+            if isinstance(lexed_input, Rule):
+                if current_rule:
+                    reduced_parser_input.append(lexed_input)
+                current_rule = lexed_input
+            # Lexed input is filler
+            else:
+                current_rule.expand(lexed_input)
+        reduced_parser_input.append(current_rule)  # Add last rule
 
-        while len(results) != 1:
-            # TODO: Remove this debug statement
+        # 2. Let rules apply their logic to their new, expanded input and
+        # turn them into their target models, depending on the kind of block
+        self.modeled_parser_output = []
+        for rule in reduced_parser_input:
+            self.modeled_parser_output.append(rule.apply())
 
-            results = []
-            input_indices = iter(range(len(rule_input)))
-            skip_lines = 0
-
-            for input_index in input_indices:
-                # Skip lines if a rule used lookaheads
-                if skip_lines > 0:
-                    skip_lines -= 1
-                    continue
-
-                for rule in self.rules:
-                    # Try to apply a rule. If success, save result and
-                    # continue with the remaining block
-                    try:
-                        result, skip_lines = rule(
-                            rule_input[input_index:]  # Only use slice
-                        ).apply()
-                        results.append(result)
-                        was_applied_global = True
-                        was_applied_local = True
-                        break
-                    except RuleApplicationException:
-                        continue
-
-                if not was_applied_local:
-                    results.append(rule_input[input_index])
-
-                was_applied_local = False
-
-            # If no rules were applied, raise exception
-            if not was_applied_global:
-                for inp in rule_input:
-                    print inp
-                print ""
-
-                raise ParsingException(
-                    u"No rule could be applied to the following "
-                    u"temporary results:\n{}\n\nFollowing rules were "
-                    u"at disposal:\n{}".format(
-                        u", ".join(
-                            [unicode(result) for result in results]
-                        ),
-                        u", ".join(
-                            [rule.__name__ for rule in self.rules]
-                        )
-                    )
-                )
-
-            # Prepare for next iteration
-            rule_input = results
-            was_applied_global = False
-
-        return results[0]
+    @abc.abstractproperty
+    def parser_target(self):
+        """
+        Return the parser target with custom key word arguments.
+        """
+        return self.parser_target_class(input=self.modeled_parser_output)
 
     def _check_parser_coherence(self):
         """
         Check if the arguments given during the initialization actually make
         sense.
         """
-        if len(self.rules) == 0:
-            raise ParsingException(
-                u"{} doesn't possess any rules to utilize.".format(
+        if len(self.rule_classes) == 0:
+            raise ParserCoherenceException(
+                "{} doesn't possess any rules to utilize.".format(
                     self.__class__.__name__
                 )
             )
 
         if len(self.parser_input) == 0 or not self.parser_input:
-            raise ParsingException(
-                u"{} doesn't have any input to parse.".format(
+            raise ParserCoherenceException(
+                "{} doesn't have any input to parse.".format(
                     self.__class__.__name__
                 )
             )
@@ -137,33 +143,47 @@ class BundesParser(Parser):
     "Meta"-parser that partitions the parliament protocol into blocks and
     applies a specific parser to each of them.
     """
-    def __init__(self, rules, parser_config, input_path):
+
+    def __init__(self, rule_classes, parser_config, input_path):
         # Init parser args from config
         self.block_divider = config.get("PROTOCOL_BLOCK_DIVIDER", ("\r\n", ))
 
-        super(BundesParser, self).__init__(rules, parser_config, input_path)
+        super().__init__(
+            rule_classes, parser_config, input_path,
+            parser_target_class=Protocol
+        )
 
     def process(self):
         """
         Process the protocol.
         """
         input_path = self.parser_input
-        print u"Loading file from {}...".format(input_path)
+        print("Loading file from {}...".format(input_path))
         lines = [line for line in codecs.open(input_path, "r", "utf-8")]
 
-        print u"Partitioning protocol into blocks, assigning parsers..."
+        print("Partitioning protocol into blocks, assigning parsers...")
         blocks = self._blockify(lines)
         parsers, blocks = self._assign_parsers(blocks)
-        print u"Created {} blocks: {}.".format(
+        print("Created {} blocks: {}.".format(
             len(blocks), ", ".join(self.config["PROTOCOL_SECTIONS"].keys())
-        )
+        ))
 
         # Parse sections
-        results = [parser.process() for parser in parsers]
-        print results
-        for result in results:
-            print result.attributes
+        # TODO (Refactor): Change back to list comprehension after finishing up
+        # implementing all the rules  (DU 15s.04.17)
+        # results = [parser.process() for parser in parsers]
+        results = []
+        for parser in parsers:
+            result = parser.process()
+            print(result.attributes)
+            results.append(result)
+
         return results
+
+    @property
+    def parser_target(self):
+        # TODO (Refactor): Make more specific [DU 15.04.17]
+        return self.parser_target_class(items=self.modeled_parser_output)
 
     def _blockify(self, lines):
         """
@@ -202,7 +222,7 @@ class BundesParser(Parser):
         block_parsers = [None] * len(blocks)
         protocol_sections = self.config["PROTOCOL_SECTIONS"]
 
-        for section, position in protocol_sections.iteritems():
+        for section, position in protocol_sections.items():
             block_parsers[position] = SECTIONS_TO_PARSERS[section]
 
         self._check_positions(protocol_sections, len(blocks))
@@ -233,9 +253,9 @@ class BundesParser(Parser):
         positions = protocol_sections.values()
 
         for position in positions:
-            if positions.count(position) > 1:
-                raise ProtocolParsingException(
-                    u"At least two sections are occupying position {}".format(
+            if list(positions).count(position) > 1:
+                raise ProtocolParserAssignmentException(
+                    "At least two sections are occupying position {}".format(
                         position
                     )
                 )
@@ -243,8 +263,8 @@ class BundesParser(Parser):
             # Check if negative positions are already being occupied
             if position < 0:
                 if (number_of_blocks + position) in positions:
-                    raise ProtocolParsingException(
-                        u"At least two sections are occupying position {}".format(
+                    raise ProtocolParserAssignmentException(
+                        "At least two sections are occupying position {}".format(
                             position
                         )
                     )
@@ -255,48 +275,91 @@ class HeaderParser(Parser):
     Special parser to parser the protocol's header.
     """
     def __init__(self, parser_config, parser_input):
-        super(HeaderParser, self).__init__(
-            [HeaderRule], parser_config, parser_input
+        super().__init__(
+            [HeaderRule], parser_config, parser_input, Header
+        )
+
+    @property
+    def parser_target(self):
+        return self.parser_target_class(
+            header_information=self.modeled_parser_output
         )
 
 
-class AgendaItemsParser(Parser):
-
+class AgendaParser(Parser):
+    # TODO (Refactor): Add missing documentation
     def __init__(self, parser_config, parser_input):
-        super(AgendaItemsParser, self).__init__(
+        super().__init__(
             [
-                AgendaItemRule
+                #AgendaItemRule
                 #AgendaRule,
                 #AgendaAttachmentRule
-                #AgendaCommentRule  # TODO: Re-add this rule
+                #AgendaCommentRule  # TODO: Re-add these rules
             ],
             parser_config,
-            parser_input
+            parser_input,
+            parser_target_class=Agenda
         )
+
+    @property
+    def parser_target(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
 
 class SessionHeaderParser(Parser):
-
+    """
+    Parser that parses the header preceding the actual protocol of the
+    parliament's session.
+    """
     def __init__(self, parser_config, parser_input):
-        super(SessionHeaderParser, self).__init__(
-            [], parser_config, parser_input  # TODO: Add actual rules
+        super().__init__(
+            [],  # TODO: Add actual rules
+            parser_config,
+            parser_input,
+            parser_target_class=Header
         )
 
+    @property
+    def parser_target(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
-class DiscussionsParser(Parser):
 
+class SessionParser(Parser):
+    """
+    Parser that parses the parliament's session.
+    """
     def __init__(self, parser_config, parser_input):
-        super(DiscussionsParser, self).__init__(
-            [], parser_config, parser_input  # TODO: Add actual rules
+        super().__init__(
+            [],  # TODO: Add actual rules
+            parser_config,
+            parser_input,
+            parser_target_class=None  # TODO (Refactor): Add parser target
         )
+
+    @property
+    def parser_target(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
 
 class AttachmentsParser(Parser):
-
+    """
+    Parser that parses the attachments to the parliament's session.
+    """
     def __init__(self, parser_config, parser_input):
-        super(AttachmentsParser, self).__init__(
-            [], parser_config, parser_input  # TODO: Add actual rules
+        super().__init__(
+            [],  # TODO: Add actual rules
+            parser_config,
+            parser_input,
+            parser_target_class=None  # TODO (Refactor): Add parser target
         )
+
+    @property
+    def parser_target(self):
+        # TODO (Implement) [DU 15.04.17]
+        return {}
 
 if __name__ == "__main__":
     config = get_config_from_py_file("../../config.py")
