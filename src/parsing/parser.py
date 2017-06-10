@@ -177,6 +177,7 @@ class BundesParser(Parser):
             result = parser.process()
             print(result.attributes)
             results.append(result)
+        results = [parser.process() for parser in parsers]
 
         return results
 

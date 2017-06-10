@@ -58,7 +58,7 @@ class Model:
                 "No validation schema was declared for this class."
             )
 
-        if not self.validator.validate(init_attributes, self.schema):
+        if not self.validator.validate(init_attributes, schema=self.schema):
             raise cerberus.DocumentError(
                 "The following error were encountered during the validation "
                 "of this {} target: {}".format(
@@ -98,7 +98,7 @@ class Model:
     def __getattr__(self, item):
         if item in self.not_readable:
             raise NotReadableException(item)
-        return super().__getattribute__(item)
+        return getattr(super(), item)
 
     def __str__(self):
         return "<{} #{}>".format(
@@ -180,7 +180,6 @@ class ParserTargetValidator(cerberus.Validator):
         """
         Implement extra function to validate RuleTargets.
         """
-        # TODO (Bug): This let's the validation fail. Why? [DU 15.04.17]
         return isinstance(value, RuleTarget)
 
     def _validate_type_parsertarget(self, value):
