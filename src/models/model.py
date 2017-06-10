@@ -58,6 +58,10 @@ class Model:
                 "No validation schema was declared for this class."
             )
 
+        # Let exception wrapped in Empty objects pass
+        if "exception" in init_attributes:
+            return
+
         if not self.validator.validate(init_attributes, schema=self.schema):
             raise cerberus.DocumentError(
                 "The following error were encountered during the validation "
