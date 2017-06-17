@@ -4,31 +4,8 @@
 Model for an item of the agenda of the meeting.
 """
 
-# STD
-import re
-
 # PROJECT
-from config import (
-    PROTOCOL_AGENDA_ITEM_PATTERN,
-    PROTOCOL_AGENDA_SUBITEM_PATTERN,
-    PROTOCOL_AGENDA_SUBITEM_ITEMTYPE
-)
 from models.model import ParserTarget, RuleTarget
-
-
-class Protocol(ParserTarget):
-    """
-    Global model to contain all other models.
-    """
-    items = []
-
-    def __init__(self, items):
-        super().__init__(items=items)
-
-    @property
-    def schema(self):
-        # TODO (Implement) [DU 15.04.17]
-        return {}
 
 
 class Agenda(ParserTarget):
@@ -72,6 +49,18 @@ class AgendaItem(RuleTarget):
         # TODO (Implement) [DU 15.04.17]
         return {}
 
+    def _get_agenda_item_type(self, header):
+        # TODO (Implement) [DU 15.04.17]
+        pass
+
+    def _get_agenda_item_type(self, header):
+        # TODO (Implement) [DU 15.04.17]
+        pass
+
+    def _split_agenda_subitems(self, subitems):
+        # TODO (Implement) [DU 15.04.17]
+        pass
+
 
 class AgendaComment(RuleTarget):
     """
@@ -96,8 +85,6 @@ class AgendaAttachment(RuleTarget):
     """
     Model for attachments to the protocol's agenda.
     """
-    pass
-
     @property
     def schema(self):
         # TODO (Implement) [DU 15.04.17]

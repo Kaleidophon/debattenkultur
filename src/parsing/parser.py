@@ -30,13 +30,13 @@ from misc.custom_exceptions import (
 from parsing.rules import (
     Rule,
     HeaderRule,
-    AgendaRule,
     AgendaItemRule,
     AgendaAttachmentRule,
     AgendaCommentRule
 )
 from models.model import Empty, Filler
-from models.agenda_item import Agenda, Protocol
+from models.agenda import Agenda
+from models.protocol import Protocol
 from models.header import Header
 
 
@@ -66,7 +66,7 @@ class Parser:
                 raise
 
     def lex(self):
-        """
+        """^
         Divide up lines into either
 
         a) Parsing rules that trigger for a certain line (a specific regex
@@ -277,7 +277,10 @@ class HeaderParser(Parser):
     """
     def __init__(self, parser_config, parser_input):
         super().__init__(
-            [HeaderRule], parser_config, parser_input, Header
+            [HeaderRule],
+            parser_config,
+            parser_input,
+            parser_target_class=Header
         )
 
     @property
@@ -292,10 +295,9 @@ class AgendaParser(Parser):
     def __init__(self, parser_config, parser_input):
         super().__init__(
             [
-                #AgendaItemRule
-                #AgendaRule,
-                #AgendaAttachmentRule
-                #AgendaCommentRule  # TODO: Re-add these rules
+                AgendaItemRule,
+                AgendaAttachmentRule,
+                AgendaCommentRule
             ],
             parser_config,
             parser_input,
@@ -304,8 +306,9 @@ class AgendaParser(Parser):
 
     @property
     def parser_target(self):
-        # TODO (Implement) [DU 15.04.17]
-        return {}
+        return self.parser_target_class(
+            items=self.modeled_parser_output
+        )
 
 
 class SessionHeaderParser(Parser):

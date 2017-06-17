@@ -12,6 +12,9 @@ GitHub.
 The following paragraph lists the features necessary to complete the
 respective versions of the project.
 
+Take a look at [at the project's Kanban board](https://tree.taiga.io/project/kaleidophon-debattenkultur/kanban)
+to see which tasks are currently worked on.
+
 ## Versions
 
 ### v0.1

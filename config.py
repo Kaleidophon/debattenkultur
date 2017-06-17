@@ -9,10 +9,13 @@ PROTOCOL_SECTIONS = {
 	"ATTACHMENTS": -1  # Everything before belongs to DISCUSSIONS
 }
 PROTOCOL_DATE_FORMAT = '%A, den %d. %B %Y'
-PROTOCOL_AGENDA_ITEM_PATTERN = r"(Zusatzt|T)agesordnungspunkt \d+:"
 PROTOCOL_AGENDA_SUBITEM_PATTERN = r"\w\)\t.+"
 PROTOCOL_AGENDA_SUBITEM_ITEMTYPE = "Untertagesordnungspunkt"
-PROTOCOL_AGENDA_ATTACHMENT_PATTERN = r"Anlage \d+"
 
 # Rule triggers
 HEADER_RULE_TRIGGER = "Deutscher Bundestag"
+
+AGENDA_ATTACHMENT_TRIGGER = r"Anlage ^\d+"
+AGENDA_ITEM_TRIGGER = r"(Zusatzt|T)agesordnungspunkt \d+:"
+# TODO (Refactor): Add more triggers [DU 11.06.17]
+AGENDA_COMMENT_TRIGGER = r"^Glückw"

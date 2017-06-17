@@ -65,7 +65,7 @@ class Model:
         if not self.validator.validate(init_attributes, schema=self.schema):
             raise cerberus.DocumentError(
                 "The following error were encountered during the validation "
-                "of this {} target: {}".format(
+                "of this {}: {}".format(
                     self.target_type,
                     "\t* ".join(
                         [

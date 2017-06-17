@@ -9,10 +9,13 @@ import abc
 import re
 
 # PROJECT
-from config import HEADER_RULE_TRIGGER
+from config import (
+    HEADER_RULE_TRIGGER, AGENDA_ATTACHMENT_TRIGGER, AGENDA_COMMENT_TRIGGER,
+    AGENDA_ITEM_TRIGGER
+)
 from models.header import HeaderInformation
 from models.model import Filler
-from models.agenda_item import (
+from models.agenda import (
     AgendaItem,
     Agenda,
     AgendaAttachment,
@@ -124,13 +127,14 @@ class AgendaItemRule(Rule):
     Rule to parse AgendaItems.
     """
     def __init__(self, rule_input):
-        # TODO (Refactor): Add rule trigger
-        super().__init__(rule_input, AgendaItem, "")
+        super().__init__(rule_input, AgendaItem, AGENDA_ITEM_TRIGGER)
 
     @property
     def rule_target(self):
-        # TODO (Implement): [DU 15.04.17]
-        return {}
+        return self.rule_target_class(
+            header=self.rule_input[0],
+            contents=self.rule_input[1:]
+        )
 
 
 class AgendaCommentRule(Rule):
@@ -138,14 +142,11 @@ class AgendaCommentRule(Rule):
     Rule to parse a comment to the agenda.
     """
     def __init__(self, rule_input):
-        # TODO (Refactor): Add rule trigger
-        super().__init__(rule_input, AgendaComment, "")
+        super().__init__(rule_input, AgendaComment, AGENDA_COMMENT_TRIGGER)
 
     @property
     def rule_target(self):
-        return self.rule_target_class(
-            contents=self.rule_input
-        )
+        return self.rule_target_class(contents=self.rule_input)
 
 
 class AgendaAttachmentRule(Rule):
@@ -153,26 +154,7 @@ class AgendaAttachmentRule(Rule):
     Rule to parse Attachments to the Agenda.
     """
     def __init__(self, rule_input):
-        # TODO (Refactor): Add rule trigger
-        super().__init__(
-            rule_input,
-            AgendaAttachment,
-            ""
-        )
-
-    @property
-    def rule_target(self):
-        # TODO (Implement): [DU 15.04.17]
-        return {}
-
-
-class AgendaRule(Rule):
-    """
-    Rule to group multiple agenda items to an agenda.
-    """
-    def __init__(self, rule_input):
-        # TODO (Refactor): Add rule trigger
-        super().__init__(rule_input, Agenda, "")
+        super().__init__(rule_input, AgendaAttachment, AGENDA_ATTACHMENT_TRIGGER)
 
     @property
     def rule_target(self):
