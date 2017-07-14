@@ -19,25 +19,23 @@ Parser to parse protocols of the German Bundestag.
 import abc
 import codecs
 
-# PROJECT
-from misc.helpers import get_config_from_py_file
-from misc.custom_exceptions import (
+from custom_exceptions import (
     CustomException,
     ProtocolParserAssignmentException,
     ParserCoherenceException
 )
-
-from parsing.rules import (
+from helpers import get_config_from_py_file
+from models.agenda import Agenda
+from models.header import Header
+from models.model import Empty, Filler
+from models.protocol import Protocol
+from rules import (
     Rule,
     HeaderRule,
     AgendaItemRule,
     AgendaAttachmentRule,
     AgendaCommentRule
 )
-from models.model import Empty, Filler
-from models.agenda import Agenda
-from models.protocol import Protocol
-from models.header import Header
 
 
 class Parser:
@@ -366,6 +364,6 @@ class AttachmentsParser(Parser):
         return {}
 
 if __name__ == "__main__":
-    config = get_config_from_py_file("../../config.py")
-    bp = BundesParser([], config, "../../data/samples/sample.txt")
+    config = get_config_from_py_file("./config.py")
+    bp = BundesParser([], config, "./data/samples/sample.txt")
     bp.process()

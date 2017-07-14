@@ -5,12 +5,11 @@ Header model.
 """
 
 # STD
-from datetime import datetime
 import locale
+from datetime import datetime
 
-# PROJECT
-from models.model import ParserTarget, RuleTarget
 from config import PROTOCOL_DATE_FORMAT
+from models.model import ParserTarget, RuleTarget
 
 
 class Header(ParserTarget):

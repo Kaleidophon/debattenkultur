@@ -8,20 +8,18 @@ Parsing rules used to parse the documents.
 import abc
 import re
 
-# PROJECT
 from config import (
     HEADER_RULE_TRIGGER, AGENDA_ATTACHMENT_TRIGGER, AGENDA_COMMENT_TRIGGER,
     AGENDA_ITEM_TRIGGER
 )
-from models.header import HeaderInformation
-from models.model import Filler
+from custom_exceptions import RuleApplicationException
 from models.agenda import (
     AgendaItem,
-    Agenda,
     AgendaAttachment,
     AgendaComment
 )
-from misc.custom_exceptions import RuleApplicationException
+from models.header import HeaderInformation
+from models.model import Filler
 
 
 class RuleTrigger:

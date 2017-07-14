@@ -7,11 +7,9 @@ Model superclass.
 # STD
 import abc
 
-# EXT
 import cerberus
 
-# PROJECT
-from misc.custom_exceptions import NotWritableException, NotReadableException
+from custom_exceptions import NotWritableException, NotReadableException
 
 
 class Model:

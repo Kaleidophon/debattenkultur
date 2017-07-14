@@ -5,7 +5,7 @@ Defining constants throughout the projects.
 """
 
 # PROJECT
-from parsing.parser import (
+from parser import (
 	HeaderParser,
 	AgendaParser,
 	SessionHeaderParser,
