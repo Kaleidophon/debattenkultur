@@ -4,6 +4,12 @@
 Model for an item of the agenda of the meeting.
 """
 
+# STD
+import re
+
+# EXT
+import cerberus
+
 # PROJECT
 from models.model import ParserTarget, RuleTarget
 
@@ -46,20 +52,51 @@ class AgendaItem(RuleTarget):
 
     @property
     def schema(self):
-        # TODO (Implement) [DU 15.04.17]
-        return {}
+        return {
+            "item_type": {
+                "required": True,
+                "type": "item_type_number"
+            },
+            "item_number": {
+                "required": True,
+                "type": "string"
+            },
+            "subitems": {
+                "required": True,
+                "type": "list",
+                "schema": {
+                    "type": "string"
+                }
+            }
+        }
+
+    @property
+    def validator(self):
+        return AgendaItemValidator()
 
     def _get_agenda_item_type(self, header):
-        # TODO (Implement) [DU 15.04.17]
-        pass
+        return header.split(" ")[0]
 
-    def _get_agenda_item_type(self, header):
-        # TODO (Implement) [DU 15.04.17]
-        pass
+    def _get_agenda_item_number(self, header):
+        return header.replace(":", "").split(" ")[1]
 
     def _split_agenda_subitems(self, subitems):
         # TODO (Implement) [DU 15.04.17]
+        a = 3
         pass
+
+
+class AgendaItemValidator(cerberus.Validator):
+    """
+    Overriding the default cerberus validator to explicitly validate agenda
+    item models.
+    """
+    def _validate_type_item_type_number(self, value):
+        """
+        Implement extra function to validate  agenda item types and agenda item
+        numbers.
+        """
+        return re.search(r"(Zusatzt|T)agesordnungspunkt \d+:", value)
 
 
 class AgendaComment(RuleTarget):

@@ -8,6 +8,7 @@ Header model.
 import locale
 from datetime import datetime
 
+# PROJECT
 from config import PROTOCOL_DATE_FORMAT
 from models.model import ParserTarget, RuleTarget
 

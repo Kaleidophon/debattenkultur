@@ -1,3 +1,6 @@
+# General config
+SUPPRESS_EXCEPTIONS = False
+
 PROTOCOL_BLOCK_DIVIDER = ("\r\n", "\r\n")
 
 # Sections of the parliaments protocol and their index

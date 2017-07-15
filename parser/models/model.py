@@ -6,10 +6,12 @@ Model superclass.
 
 # STD
 import abc
-
 import cerberus
+import os
 
+# PROJECT
 from custom_exceptions import NotWritableException, NotReadableException
+from config import SUPPRESS_EXCEPTIONS
 
 
 class Model:
@@ -116,6 +118,9 @@ class Empty(Model):
     def __init__(self, exception=None):
         init_args = {}
         if exception:
+            if not os.environ.get("SUPPRESS_EXCEPTIONS", SUPPRESS_EXCEPTIONS):
+                raise exception
+
             init_args["exception"] = exception.message
         super().__init__(**init_args)
 
