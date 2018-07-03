@@ -1,32 +1,52 @@
-# coding: utf-8
+"""
+Scrape bundestag plenary protocols and put them into a structured format.
+"""
+
+# STD
 import os
 import re
-import logging
 import requests
-import dataset
+from urllib.parse import urljoin
+import codecs
+
+# EXT
 from lxml import html
-from urlparse import urljoin
-from normdatei.text import clean_text, clean_name, fingerprint
-from normdatei.parties import search_party_names
+from normality import normalize
 
-log = logging.getLogger(__name__)
-
-
+# CONST
+PARTIES_SPLIT = re.compile(r'(, (auf|an|zur|zum)( die| den )?(.* gewandt)?)')
+PARTIES_REGEX = {
+    'cducsu': re.compile(' cdu ?(csu)?'),
+    'spd': re.compile(' spd'),
+    'linke': re.compile(' (die|der|den) linken?'),
+    'fdp': re.compile(' fdp'),
+    'gruene': re.compile(' bund ?nis\-?(ses)? ?90 die gru ?nen'),
+    'afd': re.compile(' afd'),
+}
+FP_REMOVE = re.compile(u'(^.*Dr.?( h.? ?c.?)?| (von( der)?)| [A-Z]\. )')
+NAME_REMOVE = [u'\\[.*\\]|\\(.*\\)', u'( de[sr])? Abg.? ',
+               u'Vizepräsidentin', u'Vizepräsident', u'Präsident',
+               u'Präsidentin', u'Alterspräsident', u'Alterspräsidentin',
+               u'Liedvortrag', u'Bundeskanzler(in)?', u', Parl\\. .*',
+               u', Staatsmin.*', u', Bundesmin.*', u', Ministe.*',
+               u'Staatsministers', 'Bundesministers',
+               u'Parl. Staatssekretärin',
+               u'Ge ?genruf', 'Weiterer Zuruf', 'Zuruf', 'Weiterer',
+               u', zur.*', u', auf die', u' an die', u', an .*', u'gewandt']
+NAME_REMOVE = re.compile(u'(%s)' % '|'.join(NAME_REMOVE), re.U)
+DE_HYPHEN = re.compile(r'([a-z])-([a-z])', re.U)
 DATA_PATH = os.environ.get('DATA_PATH', 'data')
 TXT_DIR = os.path.join(DATA_PATH, 'txt')
 OUT_DIR = os.path.join(DATA_PATH, 'out')
-
 INDEX_URL = 'https://www.bundestag.de/plenarprotokolle'
 ARCHIVE_URL = 'http://webarchiv.bundestag.de/archive/2013/0927/dokumente/protokolle/plenarprotokolle/plenarprotokolle/17%03.d.txt'
-
-CHAIRS = [u'Vizepräsidentin', u'Vizepräsident', u'Präsident', u'Präsidentin', u'Alterspräsident', u'Alterspräsidentin']
-
+CHAIRS = [u'Vizepräsidentin', u'Vizepräsident', u'Präsident', u'Präsidentin',
+          u'Alterspräsident', u'Alterspräsidentin']
 SPEAKER_STOPWORDS = ['ich zitiere', 'zitieren', 'Zitat', 'zitiert',
                      'ich rufe den', 'ich rufe die',
                      'wir kommen zur Frage', 'kommen wir zu Frage', 'bei Frage',
                      'fordert', 'fordern', u'Ich möchte',
                      'Darin steht', ' Aspekte ', ' Punkte ', 'Berichtszeitraum']
-
 BEGIN_MARK = re.compile('Beginn: [X\d]{1,2}.\d{1,2} Uhr')
 END_MARK = re.compile('(\(Schluss:.\d{1,2}.\d{1,2}.Uhr\).*|Schluss der Sitzung)')
 SPEAKER_MARK = re.compile('  (.{5,140}):\s*$')
@@ -34,14 +54,6 @@ TOP_MARK = re.compile('.*(rufe.*die Frage|zur Frage|der Tagesordnung|Tagesordnun
 POI_MARK = re.compile('\((.*)\)\s*$', re.M)
 WRITING_BEGIN = re.compile('.*werden die Reden zu Protokoll genommen.*')
 WRITING_END = re.compile(u'(^Tagesordnungspunkt .*:\s*$|– Drucksache d{2}/\d{2,6} –.*|^Ich schließe die Aussprache.$)')
-
-# POI_PREFIXES = re.compile(u'(Ge ?genruf|Weiterer Zuruf|Zuruf|Weiterer)( de[sr] (Abg.|Staatsministers|Bundesministers|Parl. Staatssekretärin))?')
-# REM_CHAIRS = '|'.join(CHAIRS)
-# NAME_REMOVE = re.compile(u'(\\[.*\\]|\\(.*\\)|%s|^Abg.? |Liedvortrag|Bundeskanzler(in)?|, zur.*|, auf die| an die|, an .*|, Parl\\. .*|gewandt|, Staatsmin.*|, Bundesmin.*|, Ministe.*)' % REM_CHAIRS, re.U)
-
-db = os.environ.get('DATABASE_URI', 'sqlite:///data.sqlite')
-eng = dataset.connect(db)
-table = eng['de_bundestag_plpr']
 
 
 class SpeechParser(object):
@@ -76,7 +88,7 @@ class SpeechParser(object):
             }
             if reset_chair:
                 chair_[0] = False
-            [text.pop() for i in xrange(len(text))]
+            [text.pop() for _ in range(len(text))]
             return data
 
         for line in self.lines:
@@ -142,21 +154,17 @@ def file_metadata(filename):
     return int(fname[:2]), int(fname[2:5])
 
 
-names = set()
-
-
 def parse_transcript(filename):
     wp, session = file_metadata(filename)
-    with open(filename, 'rb') as fh:
+    with codecs.open(filename, 'rb', "latin-1") as fh:
         text = clean_text(fh.read())
-    table.delete(wahlperiode=wp, sitzung=session)
 
     base_data = {
         'filename': filename,
         'sitzung': session,
         'wahlperiode': wp
     }
-    print "Loading transcript: %s/%.3d, from %s" % (wp, session, filename)
+    print("Loading transcript: %s/%.3d, from %s" % (wp, session, filename))
     seq = 0
     parser = SpeechParser(text.split('\n'))
 
@@ -172,14 +180,8 @@ def parse_transcript(filename):
 
         print(contrib)
 
-    #q = '''SELECT * FROM data WHERE wahlperiode = :w AND sitzung = :s
-    #        ORDER BY sequence ASC'''
-    #fcsv = os.path.basename(filename).replace('.txt', '.csv')
-    #rp = eng.query(q, w=wp, s=session)
-    #dataset.freeze(rp, filename=fcsv, prefix=OUT_DIR, format='csv')
 
-
-def fetch_protokolle():
+def fetch_protocols():
     for d in TXT_DIR, OUT_DIR:
         try:
             os.makedirs(d)
@@ -209,11 +211,52 @@ def fetch_protokolle():
             with open(txt_file, 'wb') as fh:
                 fh.write(r.content)
 
-            print url, txt_file
+            # TODO: Collect contributions in some sort of data structure
+            print(url, txt_file)
+
+
+def clean_text(text):
+    text = text.replace('\r', '\n')
+    text = text.replace(u'\xa0', ' ')
+    text = text.replace(u'\x96', '-')
+    text = text.replace(u'\u2014', '-')
+    text = text.replace(u'\u2013', '-')
+    return text
+
+
+def clean_name(name):
+    if name is None:
+        return name
+    name = NAME_REMOVE.sub('', name)
+    name = DE_HYPHEN.sub(r'\1\2', name)
+    name = name.strip('-')
+    return name.strip()
+
+
+def fingerprint(name):
+    if name is None:
+        return
+    name = FP_REMOVE.sub(' ', name.strip())
+    return normalize(name).replace(' ', '-')
+
+
+def search_party_names(text):
+    if text is None:
+        return
+    text = PARTIES_SPLIT.split(text)
+    text = normalize(text[0])
+    parties = set()
+    for party, rex in PARTIES_REGEX.items():
+        if rex.findall(text):
+            parties.add(party)
+    if not len(parties):
+        return
+    parties = ':'.join(sorted(parties))
+    return parties
 
 
 if __name__ == '__main__':
-    fetch_protokolle()
+    fetch_protocols()
 
     for filename in os.listdir(TXT_DIR):
         parse_transcript(os.path.join(TXT_DIR, filename))
