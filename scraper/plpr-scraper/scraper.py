@@ -178,6 +178,7 @@ def parse_transcript(filename):
         contrib['speaker_party'] = search_party_names(contrib['speaker'])
         seq += 1
 
+        # TODO: Collect contributions in some sort of data structure
         print(contrib)
 
 
@@ -211,7 +212,6 @@ def fetch_protocols():
             with open(txt_file, 'wb') as fh:
                 fh.write(r.content)
 
-            # TODO: Collect contributions in some sort of data structure
             print(url, txt_file)
 
 
