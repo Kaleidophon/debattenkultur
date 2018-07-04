@@ -13,6 +13,10 @@ import codecs
 from lxml import html
 from normality import normalize
 
+# PROJECT
+from db import MongoDBClient
+
+
 # CONST
 PARTIES_SPLIT = re.compile(r'(, (auf|an|zur|zum)( die| den )?(.* gewandt)?)')
 PARTIES_REGEX = {
@@ -154,7 +158,7 @@ def file_metadata(filename):
     return int(fname[:2]), int(fname[2:5])
 
 
-def parse_transcript(filename):
+def parse_transcript(filename, database):
     wp, session = file_metadata(filename)
     with codecs.open(filename, 'rb', "latin-1") as fh:
         text = clean_text(fh.read())
@@ -178,8 +182,8 @@ def parse_transcript(filename):
         contrib['speaker_party'] = search_party_names(contrib['speaker'])
         seq += 1
 
-        # TODO: Collect contributions in some sort of data structure
         print(contrib)
+        db.add_document(contrib, "contributions")
 
 
 def fetch_protocols():
@@ -256,7 +260,14 @@ def search_party_names(text):
 
 
 if __name__ == '__main__':
+    db = MongoDBClient()
+    db.initialize(
+        MONGODB_USER="debattenkultur",
+        MONGODB_PASSWORD="123456",
+        MONGODB_NAME="dkdb"
+    )
+
     fetch_protocols()
 
     for filename in os.listdir(TXT_DIR):
-        parse_transcript(os.path.join(TXT_DIR, filename))
+        parse_transcript(os.path.join(TXT_DIR, filename), db)
