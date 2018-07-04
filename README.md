@@ -1,10 +1,18 @@
 # debattenkultur
 
-TODO (Describe): How to deploy the project
-TODO (Describe): How to start the program
+"Debattenkultur" (German for "debate culture") aims to analyze the proceedings 
+of the German Bundestag. Experiments are conducted in order to shed light
+on the rhetoric behaviour of MEPs and examine other hidden features of the 
+obtained data.
 
-    cd ./parser/
-    docker build -t debattenkultur .
-    docker run debattenkultur
+## Experiments
 
-TODO (Describe): How to write new parsing rules and models
+TODO: List of experiments conducted
+
+## Usage
+
+TODO
+
+## Contributing
+
+TODO
